@@ -1,0 +1,48 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appId": 28996,
+    "appName": "V-Pet Emu",
+    "appType": "app",
+    "version": {
+      "code": 1,
+      "name": "1.0.1"
+    },
+    "icon": "icon.png",
+    "vender": "mabuchner",
+    "description": "Emulator for the first-generation of virtual pets (E0C6200 CPU, Tamagotchi, Digimon), running on Zepp OS 4."
+  },
+  "permissions": ["data:os.device.info", "device:os.local_storage"],
+  "runtime": {
+    "apiVersion": {
+      "compatible": "3.0.0",
+      "target": "3.0.0",
+      "minVersion": "3.0"
+    }
+  },
+  "debug": false,
+  "targets": {
+    "gt": {
+      "module": {
+        "page": {
+          "pages": ["page/gt/home/index.page"]
+        }
+      },
+      "platforms": [
+        {
+          "st": "r"
+        },
+        {
+          "st": "s"
+        }
+      ],
+      "designWidth": 480
+    }
+  },
+  "i18n": {
+    "en-US": {
+      "appName": "V-Pet Emu"
+    }
+  },
+  "defaultLanguage": "en-US"
+}

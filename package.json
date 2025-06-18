@@ -1,0 +1,17 @@
+{
+  "name": "vpet-emu-zepp",
+  "version": "1.0.0",
+  "description": "Emulator for the first-generation of virtual pets (E0C6200 CPU, Tamagotchi, Digimon), running on Zepp OS 4.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "mabuchner",
+  "license": "CC BY-NC 4.0",
+  "devDependencies": {
+    "@zeppos/device-types": "^3.0.0"
+  },
+  "dependencies": {
+    "@zeppos/zml": "^0.0.9"
+  }
+}
