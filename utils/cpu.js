@@ -1096,7 +1096,8 @@ export class CPU {
       //const dt0 = Date.now() - s0;
 
       //const s1 = Date.now();
-      const op = this._execute.at(opcode);
+      // Inline opcode lookup to eliminate function call overhead
+      const op = this._execute._values[this._execute._indexTable[opcode]];
       //const dt1 = Date.now() - s1;
 
       //const s = Date.now();
@@ -1220,44 +1221,62 @@ export class CPU {
   }
 
   get_mem(addr) {
+    // Fast path: RAM access (most common case)
     if (addr < RAM_SIZE) {
       return this._RAM[addr];
     }
 
-    if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
-      return this._VRAM[addr - VRAM_PART1_OFFSET];
+    // Slow path: VRAM and IO - reorganized for better branch prediction
+    if (addr >= IORAM_OFFSET) {
+      if (addr < IORAM_END) {
+        const io = this._io_tbl[addr];
+        if (io) {
+          return io[0]();
+        }
+      }
+      return 0;
     }
 
-    if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
+    if (addr >= VRAM_PART2_OFFSET) {
       return this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE];
     }
 
-    if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      const io = this._io_tbl[addr];
-      if (io) {
-        return io[0]();
-      }
+    if (addr >= VRAM_PART1_OFFSET) {
+      return this._VRAM[addr - VRAM_PART1_OFFSET];
     }
 
     return 0;
   }
 
   set_mem(addr, value) {
+    // Fast path: RAM access (most common case)
     if (addr < RAM_SIZE) {
       this._RAM[addr] = value & 0xf;
-    } else if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
-      this._VRAM[addr - VRAM_PART1_OFFSET] = value & 0xf;
-    } else if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
-      this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
-    } else if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      const io = this._io_tbl[addr];
-      try {
-        if (io) {
-          io[1](value);
+      return;
+    }
+
+    // Slow path: VRAM and IO - reorganized for better branch prediction
+    if (addr >= IORAM_OFFSET) {
+      if (addr < IORAM_END) {
+        const io = this._io_tbl[addr];
+        try {
+          if (io) {
+            io[1](value);
+          }
+        } catch (e) {
+          console.log(`set_mem exception at addr=0x${addr.toString(16)}: ${e}`);
         }
-      } catch (e) {
-        console.log(`set_mem exception at addr=0x${addr.toString(16)}: ${e}`);
       }
+      return;
+    }
+
+    if (addr >= VRAM_PART2_OFFSET) {
+      this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
+      return;
+    }
+
+    if (addr >= VRAM_PART1_OFFSET) {
+      this._VRAM[addr - VRAM_PART1_OFFSET] = value & 0xf;
     }
   }
 

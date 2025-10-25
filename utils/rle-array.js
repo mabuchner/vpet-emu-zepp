@@ -1,7 +1,7 @@
 export class RLEArray {
   constructor(maxCapacity) {
     this._length = 0;
-    this._indexTable = new Uint16Array(maxCapacity);
+    this._indexTable = new Uint8Array(maxCapacity);
     this._values = [];
   }
 
