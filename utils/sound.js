@@ -1,5 +1,3 @@
-import { ToneGenerator } from "./tone-generator";
-
 const BUZZER_FREQ_DIV = [8, 10, 12, 14, 16, 20, 24, 28];
 // const ENVELOP_STEP_DIV = [16, 20, 24, 28, 16, 20, 24, 28]; // Unused
 
@@ -9,7 +7,7 @@ const ENVELOPE_CYCLE_DIV = [16 * SOUND_CLOCK_DIV, 32 * SOUND_CLOCK_DIV];
 
 // Sound for E0C6200 CPU
 export class Sound {
-  constructor(clock) {
+  constructor(clock, toneGenerator) {
     this._system_clock = clock;
     this._one_shot_counter = 0;
     this._buzzer_freq = clock / BUZZER_FREQ_DIV[0];
@@ -20,7 +18,7 @@ export class Sound {
     this._sound_on = false;
     this._cycle_counter = 0;
 
-    this._tone_generator = new ToneGenerator();
+    this._tone_generator = toneGenerator;
   }
 
   clock() {

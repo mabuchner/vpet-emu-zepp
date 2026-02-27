@@ -206,9 +206,9 @@ const mask = {
 
 // E0C6200
 export class CPU {
-  constructor(rom, clock) {
+  constructor(rom, clock, toneGenerator) {
     this._ROM = rom;
-    this._sound = new Sound(OSC1_CLOCK);
+    this._sound = new Sound(OSC1_CLOCK, toneGenerator);
 
     this._port_pullup = mask.port_pullup;
 

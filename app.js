@@ -1,5 +1,6 @@
 import { CPU } from "./utils/cpu";
 import { ROM } from "./utils/rom";
+import { ToneGenerator } from "./utils/tone-generator";
 
 import { readFileSync } from "@zos/fs";
 
@@ -20,7 +21,8 @@ App({
     this.globalData.rom = new ROM(data);
 
     const clock = 1600000;
-    this.globalData.cpu = new CPU(this.globalData.rom, clock);
+    const toneGenerator = new ToneGenerator();
+    this.globalData.cpu = new CPU(this.globalData.rom, clock, toneGenerator);
 
     this.globalData.updateInterval = setInterval(() => {
       //const startTime = new Date();
