@@ -4,6 +4,10 @@
 
 vpet-emu-zepp aims to faithfully emulate first-generation virtual pet devices (E0C6200 CPU architecture) on modern Zepp OS 4 smartwatches. The goal is to let people experience classic virtual pets — such as the Tamagotchi P1 and Digimon — on wearable hardware, with accuracy, performance, and a minimal footprint as guiding principles.
 
+## Before Committing
+
+Run `npm run format:check` before committing. Fix any issues with `npm run format`.
+
 ## Commit Message Guidelines
 
 - Write commit messages that are clear and self-contained.
