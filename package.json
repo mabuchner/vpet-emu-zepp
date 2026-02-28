@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Emulator for the first-generation of virtual pets (E0C6200 CPU, Tamagotchi, Digimon), running on Zepp OS 4.",
   "main": "app.js",
+  "type": "module",
   "scripts": {
+    "benchmark": "node --import ./benchmark/register.mjs benchmark/index.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:fix": "eslint --fix .",
@@ -16,7 +18,8 @@
     "@zeppos/device-types": "^3.0.0",
     "eslint": "^9.29.0",
     "globals": "^16.2.0",
-    "prettier": "3.5.3"
+    "prettier": "3.5.3",
+    "tinybench": "^6.0.0"
   },
   "dependencies": {
     "@zeppos/zml": "^0.0.9"

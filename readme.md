@@ -50,7 +50,15 @@ nvm use
 zeus dev
 ```
 
-### 5. Install on Your Zepp OS Watch
+### 5. Run Benchmarks
+
+To measure performance of the CPU emulator and display rendering locally:
+
+```sh
+npm run benchmark
+```
+
+### 6. Install on Your Zepp OS Watch
 
 Generate a QR code and scan it with the Zepp App on your phone:
 
