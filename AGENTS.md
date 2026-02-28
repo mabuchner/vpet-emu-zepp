@@ -8,6 +8,8 @@ vpet-emu-zepp aims to faithfully emulate first-generation virtual pet devices (E
 
 Run `npm run format:check` before committing. Fix any issues with `npm run format`.
 
+Run `npm run lint` before committing. Fix any issues with `npm run lint:fix`.
+
 ## Commit Message Guidelines
 
 - Write commit messages that are clear and self-contained.
