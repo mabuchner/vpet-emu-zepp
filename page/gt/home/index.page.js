@@ -7,121 +7,16 @@ import {
   setWakeUpRelaunch,
 } from "@zos/display";
 // import { TEXT_STYLE } from "zosLoader:./index.page.[pf].layout.js";
+import { DISPLAY_PIXEL_COUNT_X, packVram } from "../../../utils/display";
 
 const logger = Logger.getLogger("vpet-emu");
 
-const DISPLAY_PIXEL_COUNT_X = 32;
 const DISPLAY_PIXEL_COUNT_Y = 16;
 const DISPLAY_PIXEL_SIZE = 8;
 const DISPLAY_WIDTH = DISPLAY_PIXEL_COUNT_X * DISPLAY_PIXEL_SIZE;
 const DISPLAY_HEIGHT = DISPLAY_PIXEL_COUNT_Y * DISPLAY_PIXEL_SIZE;
 const DISPLAY_POS_X = 120;
 const DISPLAY_POS_Y = 160;
-
-// The first number contains the 16-bit offset in the VRAM of the upper 8
-// pixels. The second number is the 16-bit offset of the lower 8 pixels. The
-// two offsets are stored in a single 16-bit values, so we only need to do one
-// array lookup.
-//
-// The 8 pixels of the top and the bottom half are stored in two bytes in the
-// VRAM (0x0F0F).
-const vramOffsets = new Uint16Array([
-  // "col_0
-  0 | (40 << 8),
-
-  // "col_1
-  1 | (41 << 8),
-
-  // "col_2
-  2 | (42 << 8),
-
-  // "col_3
-  3 | (43 << 8),
-
-  // "col_4
-  4 | (44 << 8),
-
-  // "col_5
-  5 | (45 << 8),
-
-  // "col_6
-  6 | (46 << 8),
-
-  // "col_7
-  7 | (47 << 8),
-
-  // "col_8
-  9 | (49 << 8),
-
-  // "col_9
-  10 | (50 << 8),
-
-  // "col_10
-  11 | (51 << 8),
-
-  // "col_11
-  12 | (52 << 8),
-
-  // "col_12
-  13 | (53 << 8),
-
-  // "col_13
-  14 | (54 << 8),
-
-  // "col_14
-  15 | (55 << 8),
-
-  // "col_15
-  16 | (56 << 8),
-
-  // "col_16
-  36 | (76 << 8),
-
-  // "col_17
-  35 | (75 << 8),
-
-  // "col_18
-  34 | (74 << 8),
-
-  // "col_19
-  33 | (73 << 8),
-
-  // "col_20
-  32 | (72 << 8),
-
-  // "col_21
-  31 | (71 << 8),
-
-  // "col_22
-  30 | (70 << 8),
-
-  // "col_23
-  29 | (69 << 8),
-
-  // "col_24
-  27 | (67 << 8),
-
-  // "col_25
-  26 | (66 << 8),
-
-  // "col_26
-  25 | (65 << 8),
-
-  // "col_27
-  24 | (64 << 8),
-
-  // "col_28
-  23 | (63 << 8),
-
-  // "col_29
-  22 | (62 << 8),
-
-  // "col_30
-  21 | (61 << 8),
-
-  // "col_31
-  20 | (60 << 8),
-]);
 
 const displayBuffers = [
   new Uint16Array(DISPLAY_WIDTH),
@@ -329,16 +224,8 @@ Page({
       const app = getApp();
       const cpu = app._options.globalData.cpu;
 
-      const words = new Uint16Array(cpu.get_VRAM().buffer);
       const buf = displayBuffers[displayBufferIndex];
-      for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
-        const offset = vramOffsets[x]; // Read two offsets at once
-        const word0 = words[offset & 0xff]; // Data for upper 8 pixels is stored at offset 0 (lower byte)
-        const word1 = words[offset >> 8]; // Data for lower 8 pixels is stored at offset 1 (higher byte)
-        const byte0 = (word0 >> 4) | (word0 & 0xf); // Data only stored in the lower nibbles 0x0F0F
-        const byte1 = (word1 >> 4) | (word1 & 0xf); // Data only stored in the lower nibbles 0x0F0F
-        buf[x] = (byte1 << 8) | byte0; // Store 16 pixels in a single word
-      }
+      packVram(cpu.get_VRAM(), buf);
 
       let hasDiff = false;
       const previousBuf = displayBuffers[(displayBufferIndex + 1) % 2];
