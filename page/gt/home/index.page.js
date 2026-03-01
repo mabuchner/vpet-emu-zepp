@@ -46,6 +46,7 @@ Page({
   state: {
     stateInterval: undefined,
     displayInterval: undefined,
+    lastDisplayMs: 0,
   },
   onInit() {
     logger.debug("page onInit invoked");
@@ -91,6 +92,26 @@ Page({
       x: 280,
       y: 30,
       w: 100,
+      h: 20,
+      color: 0xdddd00,
+      text_size: 15,
+    });
+
+    const batchMS = createWidget(widget.TEXT, {
+      text: "batch 0ms",
+      x: 140,
+      y: 50,
+      w: 200,
+      h: 20,
+      color: 0xdddd00,
+      text_size: 15,
+    });
+
+    const dispMS = createWidget(widget.TEXT, {
+      text: "disp 0ms",
+      x: 140,
+      y: 70,
+      w: 200,
       h: 20,
       color: 0xdddd00,
       text_size: 15,
@@ -173,6 +194,11 @@ Page({
         prop.TEXT,
         `${(1000 / app._options.globalData.clocksPerSecond).toFixed(1)}ms`,
       );
+      batchMS.setProperty(
+        prop.TEXT,
+        `batch ${app._options.globalData.lastBatchMs}ms`,
+      );
+      dispMS.setProperty(prop.TEXT, `disp ${this.state.lastDisplayMs}ms`);
       insText.setProperty(prop.TEXT, `#ins ${cpu.istr_counter()}`);
       pcText.setProperty(
         prop.TEXT,
@@ -220,60 +246,63 @@ Page({
     });
 
     this.state.displayInterval = setInterval(() => {
-      // const startTime = new Date();
+      const startTime = Date.now();
       const app = getApp();
       const cpu = app._options.globalData.cpu;
 
       const buf = displayBuffers[displayBufferIndex];
-      packVram(cpu.get_VRAM(), buf);
+      packVram(cpu.get_VRAM_words(), buf);
 
-      let hasDiff = false;
       const previousBuf = displayBuffers[(displayBufferIndex + 1) % 2];
-      for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
-        if (buf[x] != previousBuf[x]) {
-          hasDiff = true;
-          break;
-        }
-      }
+      let hasDiff = false;
 
-      if (hasDiff) {
+      for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
+        if (buf[x] === previousBuf[x]) {
+          continue;
+        }
+        hasDiff = true;
+
+        const x1 = x * DISPLAY_PIXEL_SIZE;
+        const x2 = x1 + DISPLAY_PIXEL_SIZE;
+
         canvas.drawRect({
-          x1: 0,
+          x1: x1,
           y1: 0,
-          x2: DISPLAY_WIDTH,
+          x2: x2,
           y2: DISPLAY_HEIGHT,
           color: 0x999999,
         });
 
-        let x1 = 0;
-        let x2 = DISPLAY_PIXEL_SIZE;
-        for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
-          let word = buf[x];
-          let y1 = 0;
-          let y2 = DISPLAY_PIXEL_SIZE;
-          for (let y = 0; word > 0 && y < DISPLAY_PIXEL_COUNT_Y; y += 1) {
-            if (word & 1) {
-              canvas.drawRect({
-                x1: x1,
-                y1: y1,
-                x2: x2,
-                y2: y2,
-                color: 0x333333,
-              });
-            }
-            y1 += DISPLAY_PIXEL_SIZE;
-            y2 += DISPLAY_PIXEL_SIZE;
+        let word = buf[x];
+        let y = 0;
+        while (word > 0 && y < DISPLAY_PIXEL_COUNT_Y) {
+          while (y < DISPLAY_PIXEL_COUNT_Y && !(word & 1)) {
             word >>= 1;
+            y += 1;
           }
-          x1 += DISPLAY_PIXEL_SIZE;
-          x2 += DISPLAY_PIXEL_SIZE;
+          if (word === 0 || y >= DISPLAY_PIXEL_COUNT_Y) {
+            break;
+          }
+          const runStart = y;
+          while (y < DISPLAY_PIXEL_COUNT_Y && word & 1) {
+            word >>= 1;
+            y += 1;
+          }
+          canvas.drawRect({
+            x1: x1,
+            y1: runStart * DISPLAY_PIXEL_SIZE,
+            x2: x2,
+            y2: y * DISPLAY_PIXEL_SIZE,
+            color: 0x333333,
+          });
         }
+      }
+
+      if (hasDiff) {
         displayBufferIndex = (displayBufferIndex + 1) % 2;
       }
 
-      // const endTime = new Date();
-      // const dt = endTime - startTime;
-      // console.log(`dt=${dt}ms`);
+      this.state.lastDisplayMs = Date.now() - startTime;
     }, 50);
   },
   _buildIconsUI() {

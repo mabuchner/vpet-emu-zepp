@@ -214,7 +214,7 @@ const OPCODE_NOP5 = 0xffb;
   const bench = new Bench(BENCH_OPTIONS);
   bench
     .add("pack 32-column VRAM → displayBuf (one frame)", () => {
-      packVram(cpu.get_VRAM(), displayBuf);
+      packVram(cpu.get_VRAM_words(), displayBuf);
     })
     .add("diff-check 32-column buffer (hasDiff scan)", () => {
       let hasDiff = false;
