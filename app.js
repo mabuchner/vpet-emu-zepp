@@ -12,6 +12,7 @@ App({
     clockCounterInterval: undefined,
     clockCounter: 0,
     clocksPerSecond: 0,
+    lastBatchMs: 0,
   },
   onCreate(/*options*/) {
     console.log("app on create invoke");
@@ -25,14 +26,12 @@ App({
     this.globalData.cpu = new CPU(this.globalData.rom, clock, toneGenerator);
 
     this.globalData.updateInterval = setInterval(() => {
-      //const startTime = new Date();
+      const startTime = Date.now();
       for (let i = 0; i < 8; i += 1) {
         this.globalData.cpu.clock();
         this.globalData.clockCounter += 1;
       }
-      //const endTime = new Date();
-      //const dt = endTime - startTime;
-      //console.log(`dt=${dt}ms`);
+      this.globalData.lastBatchMs = Date.now() - startTime;
     }, 10);
 
     this.globalData.clockCounterInterval = setInterval(() => {
