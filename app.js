@@ -24,15 +24,21 @@ App({
     const toneGenerator = new ToneGenerator();
     this.globalData.cpu = new CPU(this.globalData.rom, clock, toneGenerator);
 
+    // Adaptive batch size: adjusted each interval to keep elapsed time near 9 ms,
+    // maximising clock() throughput without overrunning the 10 ms period.
+    let batchSize = 8;
     this.globalData.updateInterval = setInterval(() => {
-      //const startTime = new Date();
-      for (let i = 0; i < 8; i += 1) {
+      const startTime = Date.now();
+      for (let i = 0; i < batchSize; i += 1) {
         this.globalData.cpu.clock();
         this.globalData.clockCounter += 1;
       }
-      //const endTime = new Date();
-      //const dt = endTime - startTime;
-      //console.log(`dt=${dt}ms`);
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 8) {
+        batchSize += 1;
+      } else if (elapsed > 10) {
+        batchSize = Math.max(1, batchSize - 1);
+      }
     }, 10);
 
     this.globalData.clockCounterInterval = setInterval(() => {

@@ -1,4 +1,3 @@
-import { RLEArrayBuilder } from "./rle-array";
 import { Sound } from "./sound";
 
 const OSC1_CLOCK = 32768;
@@ -27,7 +26,9 @@ const IORAM_SIZE = 0x07f;
 const IORAM_END = IORAM_OFFSET + IORAM_SIZE;
 
 const EMPTY_VRAM = new Uint8Array(VRAM_SIZE);
+const EMPTY_VRAM_WORDS = new Uint16Array(EMPTY_VRAM.buffer);
 const FULL_VRAM = new Uint8Array(VRAM_SIZE).fill(1);
+const FULL_VRAM_WORDS = new Uint16Array(FULL_VRAM.buffer);
 
 const IO_IT1 = 8;
 const IO_IT2 = 4;
@@ -231,70 +232,142 @@ export class CPU {
 
     const get_io_dummy = this._get_io_dummy.bind(this);
     const set_io_dummy = this._set_io_dummy.bind(this);
-    this._io_tbl = {
-      0xf00: [this._get_io_it.bind(this), set_io_dummy],
-      0xf01: [this._get_io_isw.bind(this), set_io_dummy],
-      0xf02: [this._get_io_ipt.bind(this), set_io_dummy],
-      0xf03: [this._get_io_isio.bind(this), set_io_dummy],
-      0xf04: [this._get_io_ik0.bind(this), set_io_dummy],
-      0xf05: [this._get_io_ik1.bind(this), set_io_dummy],
-      0xf10: [this._get_io_eit.bind(this), this._set_io_eit.bind(this)],
-      0xf11: [this._get_io_eisw.bind(this), this._set_io_eisw.bind(this)],
-      0xf12: [this._get_io_eipt.bind(this), this._set_io_eipt.bind(this)],
-      0xf13: [this._get_io_eisio.bind(this), this._set_io_eisio.bind(this)],
-      0xf14: [this._get_io_eik0.bind(this), this._set_io_eik0.bind(this)],
-      0xf15: [this._get_io_eik1.bind(this), this._set_io_eik1.bind(this)],
-      0xf20: [this._get_io_tm30.bind(this), set_io_dummy],
-      0xf21: [this._get_io_tm74.bind(this), set_io_dummy],
-      0xf22: [this._get_io_swl.bind(this), set_io_dummy],
-      0xf23: [this._get_io_swh.bind(this), set_io_dummy],
-      0xf24: [this._get_io_pt30.bind(this), set_io_dummy],
-      0xf25: [this._get_io_pt74.bind(this), set_io_dummy],
-      0xf26: [this._get_io_rd30.bind(this), this._set_io_rd30.bind(this)],
-      0xf27: [this._get_io_rd74.bind(this), this._set_io_rd74.bind(this)],
-      0xf30: [this._get_io_sd30.bind(this), this._set_io_sd30.bind(this)],
-      0xf31: [this._get_io_sd74.bind(this), this._set_io_sd74.bind(this)],
-      0xf40: [this._get_io_k0.bind(this), set_io_dummy],
-      0xf41: [this._get_io_dfk0.bind(this), set_io_dummy],
-      0xf42: [this._get_io_k1.bind(this), set_io_dummy],
-      0xf50: [this._get_io_r0.bind(this), this._set_io_r0.bind(this)],
-      0xf51: [this._get_io_r1.bind(this), this._set_io_r1.bind(this)],
-      0xf52: [this._get_io_r2.bind(this), this._set_io_r2.bind(this)],
-      0xf53: [this._get_io_r3.bind(this), this._set_io_r3.bind(this)],
-      0xf54: [this._get_io_r4.bind(this), this._set_io_r4.bind(this)],
-
-      0xf60: [this._get_io_p0.bind(this), this._set_io_p0.bind(this)],
-      0xf61: [this._get_io_p1.bind(this), this._set_io_p1.bind(this)],
-      0xf62: [this._get_io_p2.bind(this), this._set_io_p2.bind(this)],
-      0xf63: [this._get_io_p3.bind(this), this._set_io_p3.bind(this)],
-
-      0xf70: [
-        this._get_io_ctrl_osc.bind(this),
-        this._set_io_ctrl_osc.bind(this),
-      ], //to-do
-      0xf71: [
-        this._get_io_ctrl_lcd.bind(this),
-        this._set_io_ctrl_lcd.bind(this),
-      ],
-      0xf72: [this._get_io_lc.bind(this), this._set_io_lc.bind(this)],
-      0xf73: [this._get_io_ctrl_svd.bind(this), set_io_dummy], //to-do
-      0xf74: [
-        this._get_io_ctrl_bz1.bind(this),
-        this._set_io_ctrl_bz1.bind(this),
-      ], //to-do
-      0xf75: [
-        this._get_io_ctrl_bz2.bind(this),
-        this._set_io_ctrl_bz2.bind(this),
-      ], //to-do
-      0xf76: [get_io_dummy, this._set_io_ctrl_tm.bind(this)],
-      0xf77: [this._get_io_ctrl_sw.bind(this), this._set_io_ctrl_sw.bind(this)],
-      0xf78: [this._get_io_ctrl_pt.bind(this), this._set_io_ctrl_pt.bind(this)],
-      0xf79: [this._get_io_ptc.bind(this), this._set_io_ptc.bind(this)],
-      0xf7a: [get_io_dummy, set_io_dummy], //to-do
-      0xf7b: [get_io_dummy, set_io_dummy], //to-do
-      0xf7d: [this._get_io_ioc.bind(this), this._set_io_ioc.bind(this)],
-      0xf7e: [this._get_io_pup.bind(this), this._set_io_pup.bind(this)],
-    };
+    this._io_tbl = new Array(IORAM_SIZE);
+    this._io_tbl[0x00] = [this._get_io_it.bind(this), set_io_dummy];
+    this._io_tbl[0x01] = [this._get_io_isw.bind(this), set_io_dummy];
+    this._io_tbl[0x02] = [this._get_io_ipt.bind(this), set_io_dummy];
+    this._io_tbl[0x03] = [this._get_io_isio.bind(this), set_io_dummy];
+    this._io_tbl[0x04] = [this._get_io_ik0.bind(this), set_io_dummy];
+    this._io_tbl[0x05] = [this._get_io_ik1.bind(this), set_io_dummy];
+    this._io_tbl[0x10] = [
+      this._get_io_eit.bind(this),
+      this._set_io_eit.bind(this),
+    ];
+    this._io_tbl[0x11] = [
+      this._get_io_eisw.bind(this),
+      this._set_io_eisw.bind(this),
+    ];
+    this._io_tbl[0x12] = [
+      this._get_io_eipt.bind(this),
+      this._set_io_eipt.bind(this),
+    ];
+    this._io_tbl[0x13] = [
+      this._get_io_eisio.bind(this),
+      this._set_io_eisio.bind(this),
+    ];
+    this._io_tbl[0x14] = [
+      this._get_io_eik0.bind(this),
+      this._set_io_eik0.bind(this),
+    ];
+    this._io_tbl[0x15] = [
+      this._get_io_eik1.bind(this),
+      this._set_io_eik1.bind(this),
+    ];
+    this._io_tbl[0x20] = [this._get_io_tm30.bind(this), set_io_dummy];
+    this._io_tbl[0x21] = [this._get_io_tm74.bind(this), set_io_dummy];
+    this._io_tbl[0x22] = [this._get_io_swl.bind(this), set_io_dummy];
+    this._io_tbl[0x23] = [this._get_io_swh.bind(this), set_io_dummy];
+    this._io_tbl[0x24] = [this._get_io_pt30.bind(this), set_io_dummy];
+    this._io_tbl[0x25] = [this._get_io_pt74.bind(this), set_io_dummy];
+    this._io_tbl[0x26] = [
+      this._get_io_rd30.bind(this),
+      this._set_io_rd30.bind(this),
+    ];
+    this._io_tbl[0x27] = [
+      this._get_io_rd74.bind(this),
+      this._set_io_rd74.bind(this),
+    ];
+    this._io_tbl[0x30] = [
+      this._get_io_sd30.bind(this),
+      this._set_io_sd30.bind(this),
+    ];
+    this._io_tbl[0x31] = [
+      this._get_io_sd74.bind(this),
+      this._set_io_sd74.bind(this),
+    ];
+    this._io_tbl[0x40] = [this._get_io_k0.bind(this), set_io_dummy];
+    this._io_tbl[0x41] = [this._get_io_dfk0.bind(this), set_io_dummy];
+    this._io_tbl[0x42] = [this._get_io_k1.bind(this), set_io_dummy];
+    this._io_tbl[0x50] = [
+      this._get_io_r0.bind(this),
+      this._set_io_r0.bind(this),
+    ];
+    this._io_tbl[0x51] = [
+      this._get_io_r1.bind(this),
+      this._set_io_r1.bind(this),
+    ];
+    this._io_tbl[0x52] = [
+      this._get_io_r2.bind(this),
+      this._set_io_r2.bind(this),
+    ];
+    this._io_tbl[0x53] = [
+      this._get_io_r3.bind(this),
+      this._set_io_r3.bind(this),
+    ];
+    this._io_tbl[0x54] = [
+      this._get_io_r4.bind(this),
+      this._set_io_r4.bind(this),
+    ];
+    this._io_tbl[0x60] = [
+      this._get_io_p0.bind(this),
+      this._set_io_p0.bind(this),
+    ];
+    this._io_tbl[0x61] = [
+      this._get_io_p1.bind(this),
+      this._set_io_p1.bind(this),
+    ];
+    this._io_tbl[0x62] = [
+      this._get_io_p2.bind(this),
+      this._set_io_p2.bind(this),
+    ];
+    this._io_tbl[0x63] = [
+      this._get_io_p3.bind(this),
+      this._set_io_p3.bind(this),
+    ];
+    this._io_tbl[0x70] = [
+      this._get_io_ctrl_osc.bind(this),
+      this._set_io_ctrl_osc.bind(this),
+    ]; //to-do
+    this._io_tbl[0x71] = [
+      this._get_io_ctrl_lcd.bind(this),
+      this._set_io_ctrl_lcd.bind(this),
+    ];
+    this._io_tbl[0x72] = [
+      this._get_io_lc.bind(this),
+      this._set_io_lc.bind(this),
+    ];
+    this._io_tbl[0x73] = [this._get_io_ctrl_svd.bind(this), set_io_dummy]; //to-do
+    this._io_tbl[0x74] = [
+      this._get_io_ctrl_bz1.bind(this),
+      this._set_io_ctrl_bz1.bind(this),
+    ]; //to-do
+    this._io_tbl[0x75] = [
+      this._get_io_ctrl_bz2.bind(this),
+      this._set_io_ctrl_bz2.bind(this),
+    ]; //to-do
+    this._io_tbl[0x76] = [get_io_dummy, this._set_io_ctrl_tm.bind(this)];
+    this._io_tbl[0x77] = [
+      this._get_io_ctrl_sw.bind(this),
+      this._set_io_ctrl_sw.bind(this),
+    ];
+    this._io_tbl[0x78] = [
+      this._get_io_ctrl_pt.bind(this),
+      this._set_io_ctrl_pt.bind(this),
+    ];
+    this._io_tbl[0x79] = [
+      this._get_io_ptc.bind(this),
+      this._set_io_ptc.bind(this),
+    ];
+    this._io_tbl[0x7a] = [get_io_dummy, set_io_dummy]; //to-do
+    this._io_tbl[0x7b] = [get_io_dummy, set_io_dummy]; //to-do
+    this._io_tbl[0x7d] = [
+      this._get_io_ioc.bind(this),
+      this._set_io_ioc.bind(this),
+    ];
+    this._io_tbl[0x7e] = [
+      this._get_io_pup.bind(this),
+      this._set_io_pup.bind(this),
+    ];
 
     this._get_abmxmy_tbl = [
       this.get_A.bind(this),
@@ -310,116 +383,502 @@ export class CPU {
       this.set_MY.bind(this),
     ];
 
-    this._execute = new RLEArrayBuilder()
-      .push(256, this._jp_s.bind(this)) //0 0 0 0  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._retd_l.bind(this)) //0 0 0 1  l7 l6 l5 l4  l3 l2 l1 l0
-      .push(256, this._jp_c_s.bind(this)) //0 0 1 0  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._jp_nc_s.bind(this)) //0 0 1 1  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._call_s.bind(this)) //0 1 0 0  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._calz_s.bind(this)) //0 1 0 1  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._jp_z_s.bind(this)) //0 1 1 0  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._jp_nz_s.bind(this)) //0 1 1 1  s7 s6 s5 s4  s3 s2 s1 s0
-      .push(256, this._ld_y_y.bind(this)) //1 0 0 0  y7 y6 y5 y4  y3 y2 y1 y0
-      .push(256, this._lbpx_mx_l.bind(this)) //1 0 0 1  l7 l6 l5 l4  l3 l2 l1 l0
-      .push(16, this._adc_xh_i.bind(this)) //1 0 1 0  0 0 0 0  i3 i2 i1 i0
-      .push(16, this._adc_xl_i.bind(this)) //1 0 1 0  0 0 0 1  i3 i2 i1 i0
-      .push(16, this._adc_yh_i.bind(this)) //1 0 1 0  0 0 1 0  i3 i2 i1 i0
-      .push(16, this._adc_yl_i.bind(this)) //1 0 1 0  0 0 1 1  i3 i2 i1 i0
-      .push(16, this._cp_xh_i.bind(this)) //1 0 1 0  0 1 0 0  i3 i2 i1 i0
-      .push(16, this._cp_xl_i.bind(this)) //1 0 1 0  0 1 0 1  i3 i2 i1 i0
-      .push(16, this._cp_yh_i.bind(this)) //1 0 1 0  0 1 1 0  i3 i2 i1 i0
-      .push(16, this._cp_yl_i.bind(this)) //1 0 1 0  0 1 1 1  i3 i2 i1 i0
-      .push(16, this._add_r_q.bind(this)) //1 0 1 0  1 0 0 0  r1 r0 q1 q0
-      .push(16, this._adc_r_q.bind(this)) //1 0 1 0  1 0 0 1  r1 r0 q1 q0
-      .push(16, this._sub_r_q.bind(this)) //1 0 1 0  1 0 1 0  r1 r0 q1 q0
-      .push(16, this._sbc_r_q.bind(this)) //1 0 1 0  1 0 1 1  r1 r0 q1 q0
-      .push(16, this._and_r_q.bind(this)) //1 0 1 0  1 1 0 0  r1 r0 q1 q0
-      .push(16, this._or_r_q.bind(this)) //1 0 1 0  1 1 0 1  r1 r0 q1 q0
-      .push(16, this._xor_r_q.bind(this)) //1 0 1 0  1 1 1 0  r1 r0 q1 q0
-      .push(16, this._rlc_r.bind(this)) //1 0 1 0  1 1 1 1  r1 r0 r1 r0
-      .push(256, this._ld_x_x.bind(this)) //1 0 1 1  x7 x6 x5 x4  x3 x2 x1 x0
-      .push(64, this._add_r_i.bind(this)) //1 1 0 0  0 0 r1 r0  i3 i2 i1 i0
-      .push(64, this._adc_r_i.bind(this)) //1 1 0 0  0 1 r1 r0  i3 i2 i1 i0
-      .push(64, this._and_r_i.bind(this)) //1 1 0 0  1 0 r1 r0  i3 i2 i1 i0
-      .push(64, this._or_r_i.bind(this)) //1 1 0 0  1 1 r1 r0  i3 i2 i1 i0
-      .push(64, this._xor_r_i.bind(this)) //1 1 0 1  0 0 r1 r0  i3 i2 i1 i0
-      .push(64, this._sbc_r_i.bind(this)) //1 1 0 1  0 1 r1 r0  i3 i2 i1 i0
-      .push(64, this._fan_r_i.bind(this)) //1 1 0 1  1 0 r1 r0  i3 i2 i1 i0
-      .push(64, this._cp_r_i.bind(this)) //1 1 0 1  1 1 r1 r0  i3 i2 i1 i0
-      .push(64, this._ld_r_i.bind(this)) //1 1 1 0  0 0 r1 r0  i3 i2 i1 i0
-      .push(32, this._pset_p.bind(this)) //1 1 1 0  0 1 0 p4  p3 p2 p1 p0
-      .push(16, this._ldpx_mx_i.bind(this)) //1 1 1 0  0 1 1 0  i3 i2 i1 i0
-      .push(16, this._ldpy_my_i.bind(this)) //1 1 1 0  0 1 1 1  i3 i2 i1 i0
-      .push(4, this._ld_xp_r.bind(this)) //1 1 1 0  1 0 0 0  0 0 r1 r0
-      .push(4, this._ld_xh_r.bind(this)) //1 1 1 0  1 0 0 0  0 1 r1 r0
-      .push(4, this._ld_xl_r.bind(this)) //1 1 1 0  1 0 0 0  1 0 r1 r0
-      .push(4, this._rrc_r.bind(this)) //1 1 1 0  1 0 0 0  1 1 r1 r0
-      .push(4, this._ld_yp_r.bind(this)) //1 1 1 0  1 0 0 1  0 0 r1 r0
-      .push(4, this._ld_yh_r.bind(this)) //1 1 1 0  1 0 0 1  0 1 r1 r0
-      .push(4, this._ld_yl_r.bind(this)) //1 1 1 0  1 0 0 1  1 0 r1 r0
-      .push(4, this._dummy.bind(this))
-      .push(4, this._ld_r_xp.bind(this)) //1 1 1 0  1 0 1 0  0 0 r1 r0
-      .push(4, this._ld_r_xh.bind(this)) //1 1 1 0  1 0 1 0  0 1 r1 r0
-      .push(4, this._ld_r_xl.bind(this)) //1 1 1 0  1 0 1 0  1 0 r1 r0
-      .push(4, this._dummy.bind(this))
-      .push(4, this._ld_r_yp.bind(this)) //1 1 1 0  1 0 1 1  0 0 r1 r0
-      .push(4, this._ld_r_yh.bind(this)) //1 1 1 0  1 0 1 1  0 1 r1 r0
-      .push(4, this._ld_r_yl.bind(this)) //1 1 1 0  1 0 1 1  1 0 r1 r0
-      .push(4, this._dummy.bind(this))
-      .push(16, this._ld_r_q.bind(this)) //1 1 1 0  1 1 0 0  r1 r0 q1 q0
-      .push(16, this._dummy.bind(this))
-      .push(16, this._ldpx_r_q.bind(this)) //1 1 1 0  1 1 1 0  r1 r0 q1 q0
-      .push(16, this._ldpy_r_q.bind(this)) //1 1 1 0  1 1 1 1  r1 r0 q1 q0
-      .push(16, this._cp_r_q.bind(this)) //1 1 1 1  0 0 0 0  r1 r0 q1 q0
-      .push(16, this._fan_r_q.bind(this)) //1 1 1 1  0 0 0 1  r1 r0 q1 q0
-      .push(8, this._dummy.bind(this))
-      .push(4, this._acpx_mx_r.bind(this)) //1 1 1 1  0 0 1 0  1 0 r1 r0
-      .push(4, this._acpy_my_r.bind(this)) //1 1 1 1  0 0 1 0  1 1 r1 r0
-      .push(8, this._dummy.bind(this))
-      .push(4, this._scpx_mx_r.bind(this)) //1 1 1 1  0 0 1 1  1 0 r1 r0
-      .push(4, this._scpy_my_r.bind(this)) //1 1 1 1  0 0 1 1  1 1 r1 r0
-      .push(16, this._set_f_i.bind(this)) //1 1 1 1  0 1 0 0  i3 i2 i1 i0
-      .push(16, this._rst_f_i.bind(this)) //1 1 1 1  0 1 0 1  i3 i2 i1 i0
-      .push(16, this._inc_mn.bind(this)) //1 1 1 1  0 1 1 0  n3 n2 n1 n0
-      .push(16, this._dec_mn.bind(this)) //1 1 1 1  0 1 1 1  n3 n2 n1 n0
-      .push(16, this._ld_mn_a.bind(this)) //1 1 1 1  1 0 0 0  n3 n2 n1 n0
-      .push(16, this._ld_mn_b.bind(this)) //1 1 1 1  1 0 0 1  n3 n2 n1 n0
-      .push(16, this._ld_a_mn.bind(this)) //1 1 1 1  1 0 1 0  n3 n2 n1 n0
-      .push(16, this._ld_b_mn.bind(this)) //1 1 1 1  1 0 1 1  n3 n2 n1 n0
-      .push(4, this._push_r.bind(this)) //1 1 1 1  1 1 0 0  0 0 r1 r0
-      .push(1, this._push_xp.bind(this)) //1 1 1 1  1 1 0 0  0 1 0 0
-      .push(1, this._push_xh.bind(this)) //1 1 1 1  1 1 0 0  0 1 0 1
-      .push(1, this._push_xl.bind(this)) //1 1 1 1  1 1 0 0  0 1 1 0
-      .push(1, this._push_yp.bind(this)) //1 1 1 1  1 1 0 0  0 1 1 1
-      .push(1, this._push_yh.bind(this)) //1 1 1 1  1 1 0 0  1 0 0 0
-      .push(1, this._push_yl.bind(this)) //1 1 1 1  1 1 0 0  1 0 0 1
-      .push(1, this._push_f.bind(this)) //1 1 1 1  1 1 0 0  1 0 1 0
-      .push(1, this._dec_sp.bind(this)) //1 1 1 1  1 1 0 0  1 0 1 1
-      .push(4, this._dummy.bind(this))
-      .push(4, this._pop_r.bind(this)) //1 1 1 1  1 1 0 1  0 0 r1 r0
-      .push(1, this._pop_xp.bind(this)) //1 1 1 1  1 1 0 1  0 1 0 0
-      .push(1, this._pop_xh.bind(this)) //1 1 1 1  1 1 0 1  0 1 0 1
-      .push(1, this._pop_xl.bind(this)) //1 1 1 1  1 1 0 1  0 1 1 0
-      .push(1, this._pop_yp.bind(this)) //1 1 1 1  1 1 0 1  0 1 1 1
-      .push(1, this._pop_yh.bind(this)) //1 1 1 1  1 1 0 1  1 0 0 0
-      .push(1, this._pop_yl.bind(this)) //1 1 1 1  1 1 0 1  1 0 0 1
-      .push(1, this._pop_f.bind(this)) //1 1 1 1  1 1 0 1  1 0 1 0
-      .push(1, this._inc_sp.bind(this)) //1 1 1 1  1 1 0 1  1 0 1 1
-      .push(2, this._dummy.bind(this))
-      .push(1, this._rets.bind(this)) //1 1 1 1  1 1 0 1  1 1 1 0
-      .push(1, this._ret.bind(this)) //1 1 1 1  1 1 0 1  1 1 1 1
-      .push(4, this._ld_sph_r.bind(this)) //1 1 1 1  1 1 1 0  0 0 r1 r0
-      .push(4, this._ld_r_sph.bind(this)) //1 1 1 1  1 1 1 0  0 1 r1 r0
-      .push(1, this._jpba.bind(this)) //1 1 1 1  1 1 1 0  1 0 0 0
-      .push(7, this._dummy.bind(this))
-      .push(4, this._ld_spl_r.bind(this)) //1 1 1 1  1 1 1 1  0 0 r1 r0
-      .push(4, this._ld_r_spl.bind(this)) //1 1 1 1  1 1 1 1  0 1 r1 r0
-      .push(1, this._halt.bind(this)) //1 1 1 1  1 1 1 1  1 0 0 0
-      .push(2, this._dummy.bind(this))
-      .push(1, this._nop5.bind(this)) //1 1 1 1  1 1 1 1  1 0 1 1
-      .push(3, this._dummy.bind(this))
-      .push(1, this._nop7.bind(this)) //1 1 1 1  1 1 1 1  1 1 1 1
-      .build();
+    const fillOpRange = (tbl, start, count, fn) => {
+      for (let i = 0; i < count; i += 1) {
+        tbl[start + i] = fn;
+      }
+      return start + count;
+    };
+    this._execute = new Array(4096);
+    let opOffset = 0;
+    opOffset = fillOpRange(this._execute, opOffset, 256, this._jp_s.bind(this)); //0 0 0 0  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._retd_l.bind(this),
+    ); //0 0 0 1  l7 l6 l5 l4  l3 l2 l1 l0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._jp_c_s.bind(this),
+    ); //0 0 1 0  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._jp_nc_s.bind(this),
+    ); //0 0 1 1  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._call_s.bind(this),
+    ); //0 1 0 0  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._calz_s.bind(this),
+    ); //0 1 0 1  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._jp_z_s.bind(this),
+    ); //0 1 1 0  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._jp_nz_s.bind(this),
+    ); //0 1 1 1  s7 s6 s5 s4  s3 s2 s1 s0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._ld_y_y.bind(this),
+    ); //1 0 0 0  y7 y6 y5 y4  y3 y2 y1 y0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._lbpx_mx_l.bind(this),
+    ); //1 0 0 1  l7 l6 l5 l4  l3 l2 l1 l0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._adc_xh_i.bind(this),
+    ); //1 0 1 0  0 0 0 0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._adc_xl_i.bind(this),
+    ); //1 0 1 0  0 0 0 1  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._adc_yh_i.bind(this),
+    ); //1 0 1 0  0 0 1 0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._adc_yl_i.bind(this),
+    ); //1 0 1 0  0 0 1 1  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._cp_xh_i.bind(this),
+    ); //1 0 1 0  0 1 0 0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._cp_xl_i.bind(this),
+    ); //1 0 1 0  0 1 0 1  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._cp_yh_i.bind(this),
+    ); //1 0 1 0  0 1 1 0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._cp_yl_i.bind(this),
+    ); //1 0 1 0  0 1 1 1  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._add_r_q.bind(this),
+    ); //1 0 1 0  1 0 0 0  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._adc_r_q.bind(this),
+    ); //1 0 1 0  1 0 0 1  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._sub_r_q.bind(this),
+    ); //1 0 1 0  1 0 1 0  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._sbc_r_q.bind(this),
+    ); //1 0 1 0  1 0 1 1  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._and_r_q.bind(this),
+    ); //1 0 1 0  1 1 0 0  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._or_r_q.bind(this),
+    ); //1 0 1 0  1 1 0 1  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._xor_r_q.bind(this),
+    ); //1 0 1 0  1 1 1 0  r1 r0 q1 q0
+    opOffset = fillOpRange(this._execute, opOffset, 16, this._rlc_r.bind(this)); //1 0 1 0  1 1 1 1  r1 r0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      256,
+      this._ld_x_x.bind(this),
+    ); //1 0 1 1  x7 x6 x5 x4  x3 x2 x1 x0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._add_r_i.bind(this),
+    ); //1 1 0 0  0 0 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._adc_r_i.bind(this),
+    ); //1 1 0 0  0 1 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._and_r_i.bind(this),
+    ); //1 1 0 0  1 0 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._or_r_i.bind(this),
+    ); //1 1 0 0  1 1 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._xor_r_i.bind(this),
+    ); //1 1 0 1  0 0 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._sbc_r_i.bind(this),
+    ); //1 1 0 1  0 1 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._fan_r_i.bind(this),
+    ); //1 1 0 1  1 0 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._cp_r_i.bind(this),
+    ); //1 1 0 1  1 1 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      64,
+      this._ld_r_i.bind(this),
+    ); //1 1 1 0  0 0 r1 r0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      32,
+      this._pset_p.bind(this),
+    ); //1 1 1 0  0 1 0 p4  p3 p2 p1 p0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ldpx_mx_i.bind(this),
+    ); //1 1 1 0  0 1 1 0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ldpy_my_i.bind(this),
+    ); //1 1 1 0  0 1 1 1  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_xp_r.bind(this),
+    ); //1 1 1 0  1 0 0 0  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_xh_r.bind(this),
+    ); //1 1 1 0  1 0 0 0  0 1 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_xl_r.bind(this),
+    ); //1 1 1 0  1 0 0 0  1 0 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._rrc_r.bind(this)); //1 1 1 0  1 0 0 0  1 1 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_yp_r.bind(this),
+    ); //1 1 1 0  1 0 0 1  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_yh_r.bind(this),
+    ); //1 1 1 0  1 0 0 1  0 1 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_yl_r.bind(this),
+    ); //1 1 1 0  1 0 0 1  1 0 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_xp.bind(this),
+    ); //1 1 1 0  1 0 1 0  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_xh.bind(this),
+    ); //1 1 1 0  1 0 1 0  0 1 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_xl.bind(this),
+    ); //1 1 1 0  1 0 1 0  1 0 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_yp.bind(this),
+    ); //1 1 1 0  1 0 1 1  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_yh.bind(this),
+    ); //1 1 1 0  1 0 1 1  0 1 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_yl.bind(this),
+    ); //1 1 1 0  1 0 1 1  1 0 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ld_r_q.bind(this),
+    ); //1 1 1 0  1 1 0 0  r1 r0 q1 q0
+    opOffset = fillOpRange(this._execute, opOffset, 16, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ldpx_r_q.bind(this),
+    ); //1 1 1 0  1 1 1 0  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ldpy_r_q.bind(this),
+    ); //1 1 1 0  1 1 1 1  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._cp_r_q.bind(this),
+    ); //1 1 1 1  0 0 0 0  r1 r0 q1 q0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._fan_r_q.bind(this),
+    ); //1 1 1 1  0 0 0 1  r1 r0 q1 q0
+    opOffset = fillOpRange(this._execute, opOffset, 8, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._acpx_mx_r.bind(this),
+    ); //1 1 1 1  0 0 1 0  1 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._acpy_my_r.bind(this),
+    ); //1 1 1 1  0 0 1 0  1 1 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 8, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._scpx_mx_r.bind(this),
+    ); //1 1 1 1  0 0 1 1  1 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._scpy_my_r.bind(this),
+    ); //1 1 1 1  0 0 1 1  1 1 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._set_f_i.bind(this),
+    ); //1 1 1 1  0 1 0 0  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._rst_f_i.bind(this),
+    ); //1 1 1 1  0 1 0 1  i3 i2 i1 i0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._inc_mn.bind(this),
+    ); //1 1 1 1  0 1 1 0  n3 n2 n1 n0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._dec_mn.bind(this),
+    ); //1 1 1 1  0 1 1 1  n3 n2 n1 n0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ld_mn_a.bind(this),
+    ); //1 1 1 1  1 0 0 0  n3 n2 n1 n0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ld_mn_b.bind(this),
+    ); //1 1 1 1  1 0 0 1  n3 n2 n1 n0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ld_a_mn.bind(this),
+    ); //1 1 1 1  1 0 1 0  n3 n2 n1 n0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      16,
+      this._ld_b_mn.bind(this),
+    ); //1 1 1 1  1 0 1 1  n3 n2 n1 l0
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._push_r.bind(this)); //1 1 1 1  1 1 0 0  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      1,
+      this._push_xp.bind(this),
+    ); //1 1 1 1  1 1 0 0  0 1 0 0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      1,
+      this._push_xh.bind(this),
+    ); //1 1 1 1  1 1 0 0  0 1 0 1
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      1,
+      this._push_xl.bind(this),
+    ); //1 1 1 1  1 1 0 0  0 1 1 0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      1,
+      this._push_yp.bind(this),
+    ); //1 1 1 1  1 1 0 0  0 1 1 1
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      1,
+      this._push_yh.bind(this),
+    ); //1 1 1 1  1 1 0 0  1 0 0 0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      1,
+      this._push_yl.bind(this),
+    ); //1 1 1 1  1 1 0 0  1 0 0 1
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._push_f.bind(this)); //1 1 1 1  1 1 0 0  1 0 1 0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._dec_sp.bind(this)); //1 1 1 1  1 1 0 0  1 0 1 1
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._dummy.bind(this));
+    opOffset = fillOpRange(this._execute, opOffset, 4, this._pop_r.bind(this)); //1 1 1 1  1 1 0 1  0 0 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_xp.bind(this)); //1 1 1 1  1 1 0 1  0 1 0 0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_xh.bind(this)); //1 1 1 1  1 1 0 1  0 1 0 1
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_xl.bind(this)); //1 1 1 1  1 1 0 1  0 1 1 0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_yp.bind(this)); //1 1 1 1  1 1 0 1  0 1 1 1
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_yh.bind(this)); //1 1 1 1  1 1 0 1  1 0 0 0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_yl.bind(this)); //1 1 1 1  1 1 0 1  1 0 0 1
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._pop_f.bind(this)); //1 1 1 1  1 1 0 1  1 0 1 0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._inc_sp.bind(this)); //1 1 1 1  1 1 0 1  1 0 1 1
+    opOffset = fillOpRange(this._execute, opOffset, 2, this._dummy.bind(this));
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._rets.bind(this)); //1 1 1 1  1 1 0 1  1 1 1 0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._ret.bind(this)); //1 1 1 1  1 1 0 1  1 1 1 1
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_sph_r.bind(this),
+    ); //1 1 1 1  1 1 1 0  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_sph.bind(this),
+    ); //1 1 1 1  1 1 1 0  0 1 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._jpba.bind(this)); //1 1 1 1  1 1 1 0  1 0 0 0
+    opOffset = fillOpRange(this._execute, opOffset, 7, this._dummy.bind(this));
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_spl_r.bind(this),
+    ); //1 1 1 1  1 1 1 1  0 0 r1 r0
+    opOffset = fillOpRange(
+      this._execute,
+      opOffset,
+      4,
+      this._ld_r_spl.bind(this),
+    ); //1 1 1 1  1 1 1 1  0 1 r1 r0
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._halt.bind(this)); //1 1 1 1  1 1 1 1  1 0 0 0
+    opOffset = fillOpRange(this._execute, opOffset, 2, this._dummy.bind(this));
+    opOffset = fillOpRange(this._execute, opOffset, 1, this._nop5.bind(this)); //1 1 1 1  1 1 1 1  1 0 1 1
+    opOffset = fillOpRange(this._execute, opOffset, 3, this._dummy.bind(this));
+    fillOpRange(this._execute, opOffset, 1, this._nop7.bind(this)); //1 1 1 1  1 1 1 1  1 1 1 1
   }
 
   /*
@@ -512,6 +971,7 @@ export class CPU {
 
     this._RAM = new Uint8Array(RAM_SIZE);
     this._VRAM = new Uint8Array(VRAM_SIZE);
+    this._VRAM_words = new Uint16Array(this._VRAM.buffer);
 
     this._HALT = 0;
 
@@ -1074,6 +1534,16 @@ export class CPU {
     return this._VRAM;
   }
 
+  get_VRAM_words() {
+    if ((this._CTRL_LCD & IO_ALOFF) | this._RESET) {
+      return EMPTY_VRAM_WORDS;
+    }
+    if (this._CTRL_LCD & IO_ALON) {
+      return FULL_VRAM_WORDS;
+    }
+    return this._VRAM_words;
+  }
+
   get_ROM() {
     return this._ROM;
   }
@@ -1096,7 +1566,7 @@ export class CPU {
       //const dt0 = Date.now() - s0;
 
       //const s1 = Date.now();
-      const op = this._execute.at(opcode);
+      const op = this._execute[opcode];
       //const dt1 = Date.now() - s1;
 
       //const s = Date.now();
@@ -1233,7 +1703,7 @@ export class CPU {
     }
 
     if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      const io = this._io_tbl[addr];
+      const io = this._io_tbl[addr - IORAM_OFFSET];
       if (io) {
         return io[0]();
       }
@@ -1250,13 +1720,9 @@ export class CPU {
     } else if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
       this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
     } else if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      const io = this._io_tbl[addr];
-      try {
-        if (io) {
-          io[1](value);
-        }
-      } catch (e) {
-        console.log(`set_mem exception at addr=0x${addr.toString(16)}: ${e}`);
+      const io = this._io_tbl[addr - IORAM_OFFSET];
+      if (io) {
+        io[1](value);
       }
     }
   }

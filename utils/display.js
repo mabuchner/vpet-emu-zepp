@@ -105,12 +105,11 @@ export const vramOffsets = new Uint16Array([
   20 | (60 << 8),
 ]);
 
-export function packVram(vram, buf) {
-  const words = new Uint16Array(vram.buffer);
+export function packVram(vramWords, buf) {
   for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
     const offset = vramOffsets[x];
-    const word0 = words[offset & 0xff];
-    const word1 = words[offset >> 8];
+    const word0 = vramWords[offset & 0xff];
+    const word1 = vramWords[offset >> 8];
     const byte0 = (word0 >> 4) | (word0 & 0xf);
     const byte1 = (word1 >> 4) | (word1 & 0xf);
     buf[x] = (byte1 << 8) | byte0;
