@@ -1,4 +1,4 @@
-import { Vibrator, VIBRATOR_SCENE_SHORT_STRONG } from "@zos/sensor";
+import { Vibrator, VIBRATOR_SCENE_SHORT_MIDDLE } from "@zos/sensor";
 
 export class ToneGenerator {
   constructor() {
@@ -7,11 +7,11 @@ export class ToneGenerator {
 
   play(freq, noise, dutyRatio, goalTime) {
     console.log(`play(${freq}, ${noise}, ${dutyRatio}, ${goalTime})`);
-    this.vibration.setMode(VIBRATOR_SCENE_SHORT_STRONG);
+    this.vibration.setMode(VIBRATOR_SCENE_SHORT_MIDDLE);
     this.vibration.start();
   }
 
-  stop(/*goalTime*/) {
-    //console.log(`stop(${goalTime})`);
+  stop(goalTime) {
+    console.log(`stop(${goalTime})`);
   }
 }
