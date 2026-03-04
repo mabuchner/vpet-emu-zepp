@@ -14,3 +14,4 @@ Run `npm run lint` before committing. Fix any issues with `npm run lint:fix`.
 
 - Write commit messages that are clear and self-contained.
 - **Do not include URLs in commit messages** unless the URL serves as a direct reference (e.g., linking to an upstream specification, a relevant issue in another project, or a source that directly informed the change). Informational or promotional URLs are not appropriate.
+- **Do not attribute commits to AI agents.** Do not add `Co-Authored-By` trailers or any other attribution for AI tools.
