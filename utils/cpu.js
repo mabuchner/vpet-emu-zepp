@@ -231,145 +231,6 @@ export class CPU {
 
     this._RESET = 0;
 
-    const get_io_dummy = this._get_io_dummy.bind(this);
-    const set_io_dummy = this._set_io_dummy.bind(this);
-    this._io_tbl = new Array(IORAM_SIZE);
-    this._io_tbl[0x00] = [this._get_io_it.bind(this), set_io_dummy];
-    this._io_tbl[0x01] = [this._get_io_isw.bind(this), set_io_dummy];
-    this._io_tbl[0x02] = [this._get_io_ipt.bind(this), set_io_dummy];
-    this._io_tbl[0x03] = [this._get_io_isio.bind(this), set_io_dummy];
-    this._io_tbl[0x04] = [this._get_io_ik0.bind(this), set_io_dummy];
-    this._io_tbl[0x05] = [this._get_io_ik1.bind(this), set_io_dummy];
-    this._io_tbl[0x10] = [
-      this._get_io_eit.bind(this),
-      this._set_io_eit.bind(this),
-    ];
-    this._io_tbl[0x11] = [
-      this._get_io_eisw.bind(this),
-      this._set_io_eisw.bind(this),
-    ];
-    this._io_tbl[0x12] = [
-      this._get_io_eipt.bind(this),
-      this._set_io_eipt.bind(this),
-    ];
-    this._io_tbl[0x13] = [
-      this._get_io_eisio.bind(this),
-      this._set_io_eisio.bind(this),
-    ];
-    this._io_tbl[0x14] = [
-      this._get_io_eik0.bind(this),
-      this._set_io_eik0.bind(this),
-    ];
-    this._io_tbl[0x15] = [
-      this._get_io_eik1.bind(this),
-      this._set_io_eik1.bind(this),
-    ];
-    this._io_tbl[0x20] = [this._get_io_tm30.bind(this), set_io_dummy];
-    this._io_tbl[0x21] = [this._get_io_tm74.bind(this), set_io_dummy];
-    this._io_tbl[0x22] = [this._get_io_swl.bind(this), set_io_dummy];
-    this._io_tbl[0x23] = [this._get_io_swh.bind(this), set_io_dummy];
-    this._io_tbl[0x24] = [this._get_io_pt30.bind(this), set_io_dummy];
-    this._io_tbl[0x25] = [this._get_io_pt74.bind(this), set_io_dummy];
-    this._io_tbl[0x26] = [
-      this._get_io_rd30.bind(this),
-      this._set_io_rd30.bind(this),
-    ];
-    this._io_tbl[0x27] = [
-      this._get_io_rd74.bind(this),
-      this._set_io_rd74.bind(this),
-    ];
-    this._io_tbl[0x30] = [
-      this._get_io_sd30.bind(this),
-      this._set_io_sd30.bind(this),
-    ];
-    this._io_tbl[0x31] = [
-      this._get_io_sd74.bind(this),
-      this._set_io_sd74.bind(this),
-    ];
-    this._io_tbl[0x40] = [this._get_io_k0.bind(this), set_io_dummy];
-    this._io_tbl[0x41] = [this._get_io_dfk0.bind(this), set_io_dummy];
-    this._io_tbl[0x42] = [this._get_io_k1.bind(this), set_io_dummy];
-    this._io_tbl[0x50] = [
-      this._get_io_r0.bind(this),
-      this._set_io_r0.bind(this),
-    ];
-    this._io_tbl[0x51] = [
-      this._get_io_r1.bind(this),
-      this._set_io_r1.bind(this),
-    ];
-    this._io_tbl[0x52] = [
-      this._get_io_r2.bind(this),
-      this._set_io_r2.bind(this),
-    ];
-    this._io_tbl[0x53] = [
-      this._get_io_r3.bind(this),
-      this._set_io_r3.bind(this),
-    ];
-    this._io_tbl[0x54] = [
-      this._get_io_r4.bind(this),
-      this._set_io_r4.bind(this),
-    ];
-    this._io_tbl[0x60] = [
-      this._get_io_p0.bind(this),
-      this._set_io_p0.bind(this),
-    ];
-    this._io_tbl[0x61] = [
-      this._get_io_p1.bind(this),
-      this._set_io_p1.bind(this),
-    ];
-    this._io_tbl[0x62] = [
-      this._get_io_p2.bind(this),
-      this._set_io_p2.bind(this),
-    ];
-    this._io_tbl[0x63] = [
-      this._get_io_p3.bind(this),
-      this._set_io_p3.bind(this),
-    ];
-    this._io_tbl[0x70] = [
-      this._get_io_ctrl_osc.bind(this),
-      this._set_io_ctrl_osc.bind(this),
-    ]; //to-do
-    this._io_tbl[0x71] = [
-      this._get_io_ctrl_lcd.bind(this),
-      this._set_io_ctrl_lcd.bind(this),
-    ];
-    this._io_tbl[0x72] = [
-      this._get_io_lc.bind(this),
-      this._set_io_lc.bind(this),
-    ];
-    this._io_tbl[0x73] = [this._get_io_ctrl_svd.bind(this), set_io_dummy]; //to-do
-    this._io_tbl[0x74] = [
-      this._get_io_ctrl_bz1.bind(this),
-      this._set_io_ctrl_bz1.bind(this),
-    ]; //to-do
-    this._io_tbl[0x75] = [
-      this._get_io_ctrl_bz2.bind(this),
-      this._set_io_ctrl_bz2.bind(this),
-    ]; //to-do
-    this._io_tbl[0x76] = [get_io_dummy, this._set_io_ctrl_tm.bind(this)];
-    this._io_tbl[0x77] = [
-      this._get_io_ctrl_sw.bind(this),
-      this._set_io_ctrl_sw.bind(this),
-    ];
-    this._io_tbl[0x78] = [
-      this._get_io_ctrl_pt.bind(this),
-      this._set_io_ctrl_pt.bind(this),
-    ];
-    this._io_tbl[0x79] = [
-      this._get_io_ptc.bind(this),
-      this._set_io_ptc.bind(this),
-    ];
-    this._io_tbl[0x7a] = [get_io_dummy, set_io_dummy]; //to-do
-    this._io_tbl[0x7b] = [get_io_dummy, set_io_dummy]; //to-do
-    this._io_tbl[0x7d] = [
-      this._get_io_ioc.bind(this),
-      this._set_io_ioc.bind(this),
-    ];
-    this._io_tbl[0x7e] = [
-      this._get_io_pup.bind(this),
-      this._set_io_pup.bind(this),
-    ];
-
     this._get_abmxmy_tbl = [
       this.get_A.bind(this),
       this.get_B.bind(this),
@@ -539,386 +400,6 @@ export class CPU {
 
     this._sound.set_buzzer_off();
     this._sound.set_envelope_off();
-  }
-
-  _get_io_dummy() {
-    return 0;
-  }
-
-  _set_io_dummy(/*value*/) {
-    return;
-  }
-
-  _get_io_it() {
-    const ret = this._IT;
-    this._IT = 0;
-    return ret;
-  }
-
-  _get_io_isw() {
-    const ret = this._ISW;
-    this._ISW = 0;
-    return ret;
-  }
-
-  _get_io_ipt() {
-    const ret = this._IPT;
-    this._IPT = 0;
-    return ret;
-  }
-
-  _get_io_isio() {
-    const ret = this._ISIO;
-    this._ISIO = 0;
-    return ret;
-  }
-
-  _get_io_ik0() {
-    const ret = this._IK0;
-    this._IK0 = 0;
-    return ret;
-  }
-
-  _get_io_ik1() {
-    const ret = this._IK1;
-    this._IK1 = 0;
-    return ret;
-  }
-
-  _get_io_eit() {
-    return this._EIT;
-  }
-
-  _set_io_eit(value) {
-    this._EIT = value;
-  }
-
-  _get_io_eisw() {
-    return this._EISW;
-  }
-
-  _set_io_eisw(value) {
-    this._EISW = value & 0x3;
-  }
-
-  _get_io_eipt() {
-    return this._EIPT;
-  }
-
-  _set_io_eipt(value) {
-    this._EIPT = value & 0x1;
-  }
-
-  _get_io_eisio() {
-    return this._EISIO;
-  }
-
-  _set_io_eisio(value) {
-    this._EISIO = value & 0x1;
-  }
-
-  _get_io_eik0() {
-    return this._EIK0;
-  }
-
-  _set_io_eik0(value) {
-    this._EIK0 = value;
-  }
-
-  _get_io_eik1() {
-    return this._EIK1;
-  }
-
-  _set_io_eik1(value) {
-    this._EIK1 = value;
-  }
-
-  _get_io_tm30() {
-    return this._TM & 0xf;
-  }
-
-  _get_io_tm74() {
-    return (this._TM >> 4) & 0xf;
-  }
-
-  _get_io_swl() {
-    return this._SWL & 0xf;
-  }
-
-  _get_io_swh() {
-    return this._SWH & 0xf;
-  }
-
-  _get_io_pt30() {
-    return this._PT & 0xf;
-  }
-
-  _get_io_pt74() {
-    return (this._PT >> 4) & 0xf;
-  }
-
-  _get_io_rd30() {
-    return this._PRD & 0xf; // TODO: _PRD does not exist?
-  }
-
-  _set_io_rd30(value) {
-    this._RD = (this._RD & 0xf0) | (value & 0x0f);
-  }
-
-  _get_io_rd74() {
-    return (this._RD >> 4) & 0xf;
-  }
-
-  _set_io_rd74(value) {
-    this._RD = (this._RD & 0x0f) | ((value << 4) & 0xf0);
-  }
-
-  _get_io_sd30() {
-    return this._SD & 0xf;
-  }
-
-  _set_io_sd30(value) {
-    this._SD = (this._SD & 0xf0) | (value & 0x0f);
-  }
-
-  _get_io_sd74() {
-    return (this._SD >> 4) & 0xf;
-  }
-
-  _set_io_sd74(value) {
-    this._SD = (this._SD & 0x0f) | ((value << 4) & 0xf0);
-  }
-
-  _get_io_k0() {
-    return this._K0;
-  }
-
-  _get_io_dfk0() {
-    return this._DFK0;
-  }
-
-  _set_io_dfk0(value) {
-    this._DFK0 = value;
-  }
-
-  _get_io_k1() {
-    return this._K1;
-  }
-
-  _get_io_r0() {
-    return this._R0;
-  }
-
-  _set_io_r0(value) {
-    this._R0 = value;
-  }
-
-  _get_io_r1() {
-    return this._R1;
-  }
-
-  _set_io_r1(value) {
-    this._R1 = value;
-  }
-
-  _get_io_r2() {
-    return this._R2;
-  }
-
-  _set_io_r2(value) {
-    this._R2 = value;
-  }
-
-  _get_io_r3() {
-    return this._R3;
-  }
-
-  _set_io_r3(value) {
-    this._R3 = value;
-  }
-
-  _get_io_r4() {
-    return this._R4;
-  }
-
-  _set_io_r4(value) {
-    this._R4 = value;
-    if (value & IO_R43) {
-      this._sound.set_buzzer_off();
-    } else {
-      this._sound.set_buzzer_on();
-    }
-  }
-
-  _get_io_p0() {
-    return this._P0;
-  }
-
-  _set_io_p0(value) {
-    this._P0_OUTPUT_DATA = value;
-    if (this._IOC & IO_IOC0) {
-      this._P0 = value;
-    }
-  }
-
-  _get_io_p1() {
-    return this._P1;
-  }
-
-  _set_io_p1(value) {
-    this._P1_OUTPUT_DATA = value;
-    if (this._IOC & IO_IOC1) {
-      this._P1 = value;
-    }
-  }
-
-  _get_io_p2() {
-    return this._P2;
-  }
-
-  _set_io_p2(value) {
-    this._P2_OUTPUT_DATA = value;
-    if (this._IOC & IO_IOC2) {
-      this._P2 = value;
-    }
-  }
-
-  _get_io_p3() {
-    return this._P3;
-  }
-
-  _set_io_p3(value) {
-    this._P3_OUTPUT_DATA = value;
-    if (this._IOC & IO_IOC3 || this._p3_dedicated) {
-      this._P3 = value;
-    }
-  }
-
-  _get_io_ioc() {
-    return this._IOC;
-  }
-
-  _set_io_ioc(value) {
-    this._IOC = value;
-    if (this._IOC & IO_IOC0) {
-      this._P0 = this._P0_OUTPUT_DATA;
-    }
-    if (this._IOC & IO_IOC1) {
-      this._P1 = this._P1_OUTPUT_DATA;
-    }
-    if (this._IOC & IO_IOC2) {
-      this._P2 = this._P2_OUTPUT_DATA;
-    }
-    if (this._IOC & IO_IOC3) {
-      this._P3 = this._P3_OUTPUT_DATA;
-    }
-  }
-
-  _get_io_pup() {
-    return this._PUP;
-  }
-
-  _set_io_pup(value) {
-    this._PUP = value;
-  }
-
-  _get_io_ctrl_osc() {
-    return this._CTRL_OSC;
-  }
-
-  _set_io_ctrl_osc(value) {
-    this._CTRL_OSC = value;
-  }
-
-  _get_io_ctrl_lcd() {
-    return this._CTRL_LCD;
-  }
-
-  _set_io_ctrl_lcd(value) {
-    this._CTRL_LCD = value;
-  }
-
-  _get_io_lc() {
-    return this._LC;
-  }
-
-  _set_io_lc(value) {
-    this._LC = value;
-  }
-
-  _get_io_ctrl_svd() {
-    return 0;
-  }
-
-  _get_io_ctrl_bz1() {
-    return this._CTRL_BZ1;
-  }
-
-  _set_io_ctrl_bz1(value) {
-    this._CTRL_BZ1 = value;
-    this._sound.set_freq(this._CTRL_BZ1 & IO_BZFQ);
-  }
-
-  _get_io_ctrl_bz2() {
-    const isOneShotRinging = this._sound.is_one_shot_ringing() ? 1 : 0;
-    return (
-      (this._CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) | (IO_BZSHOT * isOneShotRinging)
-    );
-  }
-
-  _set_io_ctrl_bz2(value) {
-    this._CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
-
-    const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
-    this._sound.set_envelope_cycle(cycle);
-    if (value & IO_BZSHOT) {
-      const duration = (this._CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
-      this._sound.one_shot(duration);
-    }
-    if (value & IO_ENVON) {
-      this._sound.set_envelope_on();
-    } else {
-      this._sound.set_envelope_off();
-    }
-    if (value & IO_ENVRST) {
-      this._sound.reset_envelope();
-    }
-  }
-
-  _set_io_ctrl_tm(value) {
-    if (value & IO_TMRST) {
-      this._TM = 0;
-    }
-  }
-
-  _get_io_ctrl_sw() {
-    return this._CTRL_SW & IO_SWRUN;
-  }
-
-  _set_io_ctrl_sw(value) {
-    if (value & IO_SWRST) {
-      this._SWL = this._SWH = 0;
-    }
-    this._CTRL_SW = value & IO_SWRUN;
-  }
-
-  _get_io_ctrl_pt() {
-    return this._CTRL_PT & IO_PTRUN;
-  }
-
-  _set_io_ctrl_pt(value) {
-    if (value & IO_PTRST) {
-      this._PT = this._RD;
-    }
-    this._CTRL_PT = value & IO_PTRUN;
-  }
-
-  _get_io_ptc() {
-    return this._PTC;
-  }
-
-  _set_io_ptc(value) {
-    this._PTC = value;
   }
 
   pin_set(port, pin, level) {
@@ -2471,9 +1952,122 @@ export class CPU {
     }
 
     if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      const io = this._io_tbl[addr - IORAM_OFFSET];
-      if (io) {
-        return io[0]();
+      switch (addr - IORAM_OFFSET) {
+        case 0x00: {
+          const ret = this._IT;
+          this._IT = 0;
+          return ret;
+        }
+        case 0x01: {
+          const ret = this._ISW;
+          this._ISW = 0;
+          return ret;
+        }
+        case 0x02: {
+          const ret = this._IPT;
+          this._IPT = 0;
+          return ret;
+        }
+        case 0x03: {
+          const ret = this._ISIO;
+          this._ISIO = 0;
+          return ret;
+        }
+        case 0x04: {
+          const ret = this._IK0;
+          this._IK0 = 0;
+          return ret;
+        }
+        case 0x05: {
+          const ret = this._IK1;
+          this._IK1 = 0;
+          return ret;
+        }
+        case 0x10:
+          return this._EIT;
+        case 0x11:
+          return this._EISW;
+        case 0x12:
+          return this._EIPT;
+        case 0x13:
+          return this._EISIO;
+        case 0x14:
+          return this._EIK0;
+        case 0x15:
+          return this._EIK1;
+        case 0x20:
+          return this._TM & 0xf;
+        case 0x21:
+          return (this._TM >> 4) & 0xf;
+        case 0x22:
+          return this._SWL & 0xf;
+        case 0x23:
+          return this._SWH & 0xf;
+        case 0x24:
+          return this._PT & 0xf;
+        case 0x25:
+          return (this._PT >> 4) & 0xf;
+        case 0x26:
+          return this._PRD & 0xf; // TODO: _PRD does not exist?
+        case 0x27:
+          return (this._RD >> 4) & 0xf;
+        case 0x30:
+          return this._SD & 0xf;
+        case 0x31:
+          return (this._SD >> 4) & 0xf;
+        case 0x40:
+          return this._K0;
+        case 0x41:
+          return this._DFK0;
+        case 0x42:
+          return this._K1;
+        case 0x50:
+          return this._R0;
+        case 0x51:
+          return this._R1;
+        case 0x52:
+          return this._R2;
+        case 0x53:
+          return this._R3;
+        case 0x54:
+          return this._R4;
+        case 0x60:
+          return this._P0;
+        case 0x61:
+          return this._P1;
+        case 0x62:
+          return this._P2;
+        case 0x63:
+          return this._P3;
+        case 0x70:
+          return this._CTRL_OSC;
+        case 0x71:
+          return this._CTRL_LCD;
+        case 0x72:
+          return this._LC;
+        case 0x73:
+          return 0;
+        case 0x74:
+          return this._CTRL_BZ1;
+        case 0x75: {
+          const isOneShotRinging = this._sound.is_one_shot_ringing() ? 1 : 0;
+          return (
+            (this._CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) |
+            (IO_BZSHOT * isOneShotRinging)
+          );
+        }
+        case 0x77:
+          return this._CTRL_SW & IO_SWRUN;
+        case 0x78:
+          return this._CTRL_PT & IO_PTRUN;
+        case 0x79:
+          return this._PTC;
+        case 0x7d:
+          return this._IOC;
+        case 0x7e:
+          return this._PUP;
+        default:
+          return 0;
       }
     }
 
@@ -2488,9 +2082,160 @@ export class CPU {
     } else if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
       this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
     } else if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      const io = this._io_tbl[addr - IORAM_OFFSET];
-      if (io) {
-        io[1](value);
+      switch (addr - IORAM_OFFSET) {
+        case 0x10:
+          this._EIT = value;
+          break;
+        case 0x11:
+          this._EISW = value & 0x3;
+          break;
+        case 0x12:
+          this._EIPT = value & 0x1;
+          break;
+        case 0x13:
+          this._EISIO = value & 0x1;
+          break;
+        case 0x14:
+          this._EIK0 = value;
+          break;
+        case 0x15:
+          this._EIK1 = value;
+          break;
+        case 0x26:
+          this._RD = (this._RD & 0xf0) | (value & 0x0f);
+          break;
+        case 0x27:
+          this._RD = (this._RD & 0x0f) | ((value << 4) & 0xf0);
+          break;
+        case 0x30:
+          this._SD = (this._SD & 0xf0) | (value & 0x0f);
+          break;
+        case 0x31:
+          this._SD = (this._SD & 0x0f) | ((value << 4) & 0xf0);
+          break;
+        case 0x50:
+          this._R0 = value;
+          break;
+        case 0x51:
+          this._R1 = value;
+          break;
+        case 0x52:
+          this._R2 = value;
+          break;
+        case 0x53:
+          this._R3 = value;
+          break;
+        case 0x54: {
+          this._R4 = value;
+          if (value & IO_R43) {
+            this._sound.set_buzzer_off();
+          } else {
+            this._sound.set_buzzer_on();
+          }
+          break;
+        }
+        case 0x60: {
+          this._P0_OUTPUT_DATA = value;
+          if (this._IOC & IO_IOC0) {
+            this._P0 = value;
+          }
+          break;
+        }
+        case 0x61: {
+          this._P1_OUTPUT_DATA = value;
+          if (this._IOC & IO_IOC1) {
+            this._P1 = value;
+          }
+          break;
+        }
+        case 0x62: {
+          this._P2_OUTPUT_DATA = value;
+          if (this._IOC & IO_IOC2) {
+            this._P2 = value;
+          }
+          break;
+        }
+        case 0x63: {
+          this._P3_OUTPUT_DATA = value;
+          if (this._IOC & IO_IOC3 || this._p3_dedicated) {
+            this._P3 = value;
+          }
+          break;
+        }
+        case 0x70:
+          this._CTRL_OSC = value;
+          break;
+        case 0x71:
+          this._CTRL_LCD = value;
+          break;
+        case 0x72:
+          this._LC = value;
+          break;
+        case 0x74: {
+          this._CTRL_BZ1 = value;
+          this._sound.set_freq(this._CTRL_BZ1 & IO_BZFQ);
+          break;
+        }
+        case 0x75: {
+          this._CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
+          const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
+          this._sound.set_envelope_cycle(cycle);
+          if (value & IO_BZSHOT) {
+            const duration = (this._CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
+            this._sound.one_shot(duration);
+          }
+          if (value & IO_ENVON) {
+            this._sound.set_envelope_on();
+          } else {
+            this._sound.set_envelope_off();
+          }
+          if (value & IO_ENVRST) {
+            this._sound.reset_envelope();
+          }
+          break;
+        }
+        case 0x76: {
+          if (value & IO_TMRST) {
+            this._TM = 0;
+          }
+          break;
+        }
+        case 0x77: {
+          if (value & IO_SWRST) {
+            this._SWL = this._SWH = 0;
+          }
+          this._CTRL_SW = value & IO_SWRUN;
+          break;
+        }
+        case 0x78: {
+          if (value & IO_PTRST) {
+            this._PT = this._RD;
+          }
+          this._CTRL_PT = value & IO_PTRUN;
+          break;
+        }
+        case 0x79:
+          this._PTC = value;
+          break;
+        case 0x7d: {
+          this._IOC = value;
+          if (this._IOC & IO_IOC0) {
+            this._P0 = this._P0_OUTPUT_DATA;
+          }
+          if (this._IOC & IO_IOC1) {
+            this._P1 = this._P1_OUTPUT_DATA;
+          }
+          if (this._IOC & IO_IOC2) {
+            this._P2 = this._P2_OUTPUT_DATA;
+          }
+          if (this._IOC & IO_IOC3) {
+            this._P3 = this._P3_OUTPUT_DATA;
+          }
+          break;
+        }
+        case 0x7e:
+          this._PUP = value;
+          break;
       }
     }
   }
