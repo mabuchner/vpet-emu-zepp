@@ -230,20 +230,6 @@ export class CPU {
     this._if_delay = false;
 
     this._RESET = 0;
-
-    this._get_abmxmy_tbl = [
-      this.get_A.bind(this),
-      this.get_B.bind(this),
-      this.get_MX.bind(this),
-      this.get_MY.bind(this),
-    ];
-
-    this._set_abmxmy_tbl = [
-      this.set_A.bind(this),
-      this.set_B.bind(this),
-      this.set_MX.bind(this),
-      this.set_MY.bind(this),
-    ];
   }
 
   /*
@@ -767,14 +753,36 @@ export class CPU {
               // r←r+q
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
-              let res = this._get_abmxmy_tbl[r]() + this._get_abmxmy_tbl[q]();
+              let res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) +
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY));
               this._CF = res > 15 ? 1 : 0;
               if (this._DF && res > 9) {
                 res += 6;
                 this._CF = 1;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -786,8 +794,20 @@ export class CPU {
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
               let res =
-                this._get_abmxmy_tbl[r]() +
-                this._get_abmxmy_tbl[q]() +
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) +
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) +
                 this._CF;
               this._CF = res > 15 ? 1 : 0;
               if (this._DF && res > 9) {
@@ -795,7 +815,15 @@ export class CPU {
                 this._CF = 1;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -806,13 +834,35 @@ export class CPU {
               // r←r-q
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
-              let res = this._get_abmxmy_tbl[r]() - this._get_abmxmy_tbl[q]();
+              let res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) -
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY));
               this._CF = res < 0 ? 1 : 0;
               if (this._DF && res < 0) {
                 res += 10;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -824,15 +874,35 @@ export class CPU {
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
               let res =
-                this._get_abmxmy_tbl[r]() -
-                this._get_abmxmy_tbl[q]() -
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) -
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) -
                 this._CF;
               this._CF = res < 0 ? 1 : 0;
               if (this._DF && res < 0) {
                 res += 10;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -843,9 +913,31 @@ export class CPU {
               // r←r && q
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
-              const res = this._get_abmxmy_tbl[r]() & this._get_abmxmy_tbl[q]();
+              const res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) &
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY));
               this._ZF = res === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res);
+              if (r === 0) {
+                this._A = res & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res);
+              } else {
+                this.set_mem(this._IY, res);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -856,9 +948,31 @@ export class CPU {
               // r←r or q
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
-              const res = this._get_abmxmy_tbl[r]() | this._get_abmxmy_tbl[q]();
+              const res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) |
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY));
               this._ZF = res === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res);
+              if (r === 0) {
+                this._A = res & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res);
+              } else {
+                this.set_mem(this._IY, res);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -869,9 +983,31 @@ export class CPU {
               // r←r xor q
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
-              const res = this._get_abmxmy_tbl[r]() ^ this._get_abmxmy_tbl[q]();
+              const res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) ^
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY));
               this._ZF = res === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res);
+              if (r === 0) {
+                this._A = res & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res);
+              } else {
+                this.set_mem(this._IY, res);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -881,9 +1017,26 @@ export class CPU {
               // rlc_r
               // d3←d2, d2←d1, d1←d0, d0←C, C←d3
               const r = opcode & 0x3;
-              const res = (this._get_abmxmy_tbl[r]() << 1) + this._CF;
+              const res =
+                ((r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) <<
+                  1) +
+                this._CF;
               this._CF = res > 15 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -906,14 +1059,30 @@ export class CPU {
               // add_r_i
               // r←r+i3~i0
               const r = (opcode >> 4) & 0x3;
-              let res = this._get_abmxmy_tbl[r]() + (opcode & 0x00f);
+              let res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) +
+                (opcode & 0x00f);
               this._CF = res > 15 ? 1 : 0;
               if (this._DF && res > 9) {
                 res += 6;
                 this._CF = 1;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -923,14 +1092,31 @@ export class CPU {
               // adc_r_i
               // r←r+i3~i0+C
               const r = (opcode >> 4) & 0x3;
-              let res = this._get_abmxmy_tbl[r]() + (opcode & 0x00f) + this._CF;
+              let res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) +
+                (opcode & 0x00f) +
+                this._CF;
               this._CF = res > 15 ? 1 : 0;
               if (this._DF && res > 9) {
                 res += 6;
                 this._CF = 1;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -940,9 +1126,26 @@ export class CPU {
               // and_r_i
               // r←r && i3~i0
               const r = (opcode >> 4) & 0x3;
-              const res = this._get_abmxmy_tbl[r]() & opcode & 0x00f;
+              const res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) &
+                opcode &
+                0x00f;
               this._ZF = res === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res);
+              if (r === 0) {
+                this._A = res & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res);
+              } else {
+                this.set_mem(this._IY, res);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -952,9 +1155,25 @@ export class CPU {
               // or_r_i
               // r←r or i3~i0
               const r = (opcode >> 4) & 0x3;
-              const res = this._get_abmxmy_tbl[r]() | (opcode & 0x00f);
+              const res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) |
+                (opcode & 0x00f);
               this._ZF = res === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res);
+              if (r === 0) {
+                this._A = res & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res);
+              } else {
+                this.set_mem(this._IY, res);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -969,9 +1188,25 @@ export class CPU {
               // xor_r_i
               // r←r xor i3~i0
               const r = (opcode >> 4) & 0x3;
-              const res = this._get_abmxmy_tbl[r]() ^ (opcode & 0x00f);
+              const res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) ^
+                (opcode & 0x00f);
               this._ZF = res === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res);
+              if (r === 0) {
+                this._A = res & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res);
+              } else {
+                this.set_mem(this._IY, res);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -981,13 +1216,30 @@ export class CPU {
               // sbc_r_i
               // r←r-i3~i0-C
               const r = (opcode >> 4) & 0x3;
-              let res = this._get_abmxmy_tbl[r]() - (opcode & 0x00f) - this._CF;
+              let res =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) -
+                (opcode & 0x00f) -
+                this._CF;
               this._CF = res < 0 ? 1 : 0;
               if (this._DF && this._CF) {
                 res += 10;
               }
               this._ZF = (res & 0xf) === 0 ? 1 : 0;
-              this._set_abmxmy_tbl[r](res & 0xf);
+              if (r === 0) {
+                this._A = res & 0xf & 0xf;
+              } else if (r === 1) {
+                this._B = res & 0xf & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, res & 0xf);
+              } else {
+                this.set_mem(this._IY, res & 0xf);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -998,7 +1250,18 @@ export class CPU {
               // r && i3~i0
               const r = (opcode >> 4) & 0x3;
               this._ZF =
-                (this._get_abmxmy_tbl[r]() & opcode & 0x00f) === 0 ? 1 : 0;
+                ((r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) &
+                  opcode &
+                  0x00f) ===
+                0
+                  ? 1
+                  : 0;
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1008,7 +1271,15 @@ export class CPU {
               // cp_r_i
               // r-i3~i0
               const r = (opcode >> 4) & 0x3;
-              const cp = this._get_abmxmy_tbl[r]() - (opcode & 0x00f);
+              const cp =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) -
+                (opcode & 0x00f);
               this._ZF = cp === 0 ? 1 : 0;
               this._CF = cp < 0 ? 1 : 0;
               this._PC = this._NPC =
@@ -1025,7 +1296,15 @@ export class CPU {
               // ld_r_i
               // r←i3~i0
               const r = (opcode >> 4) & 0x3;
-              this._set_abmxmy_tbl[r](opcode & 0x00f);
+              if (r === 0) {
+                this._A = opcode & 0x00f & 0xf;
+              } else if (r === 1) {
+                this._B = opcode & 0x00f & 0xf;
+              } else if (r === 2) {
+                this.set_mem(this._IX, opcode & 0x00f);
+              } else {
+                this.set_mem(this._IY, opcode & 0x00f);
+              }
               this._PC = this._NPC =
                 (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
               exec_cycles = 5;
@@ -1073,7 +1352,15 @@ export class CPU {
                   // XP←r
                   const r = opcode & 0x3;
                   this._IX =
-                    (this._get_abmxmy_tbl[r]() << 8) | (this._IX & 0x0ff);
+                    ((r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) <<
+                      8) |
+                    (this._IX & 0x0ff);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1084,7 +1371,15 @@ export class CPU {
                   // XH←r
                   const r = opcode & 0x3;
                   this._IX =
-                    (this._get_abmxmy_tbl[r]() << 4) | (this._IX & 0xf0f);
+                    ((r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) <<
+                      4) |
+                    (this._IX & 0xf0f);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1094,7 +1389,15 @@ export class CPU {
                   // ld_xl_r
                   // XL←r
                   const r = opcode & 0x3;
-                  this._IX = this._get_abmxmy_tbl[r]() | (this._IX & 0xff0);
+                  this._IX =
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) |
+                    (this._IX & 0xff0);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1104,9 +1407,25 @@ export class CPU {
                   // rrc_r
                   // d3←C, d2←d3, d1←d2, d0←d1, C←d0
                   const r = opcode & 0x3;
-                  const res = this._get_abmxmy_tbl[r]() + (this._CF << 4);
+                  const res =
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) +
+                    (this._CF << 4);
                   this._CF = res & 0x1;
-                  this._set_abmxmy_tbl[r](res >> 1);
+                  if (r === 0) {
+                    this._A = (res >> 1) & 0xf;
+                  } else if (r === 1) {
+                    this._B = (res >> 1) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, res >> 1);
+                  } else {
+                    this.set_mem(this._IY, res >> 1);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1117,7 +1436,15 @@ export class CPU {
                   // YP←r
                   const r = opcode & 0x3;
                   this._IY =
-                    (this._get_abmxmy_tbl[r]() << 8) | (this._IY & 0x0ff);
+                    ((r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) <<
+                      8) |
+                    (this._IY & 0x0ff);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1128,7 +1455,15 @@ export class CPU {
                   // YH←r
                   const r = opcode & 0x3;
                   this._IY =
-                    (this._get_abmxmy_tbl[r]() << 4) | (this._IY & 0xf0f);
+                    ((r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) <<
+                      4) |
+                    (this._IY & 0xf0f);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1138,7 +1473,15 @@ export class CPU {
                   // ld_yl_r
                   // YL←r
                   const r = opcode & 0x3;
-                  this._IY = this._get_abmxmy_tbl[r]() | (this._IY & 0xff0);
+                  this._IY =
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) |
+                    (this._IY & 0xff0);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1154,7 +1497,15 @@ export class CPU {
                   // ld_r_xp
                   // r←XP
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._IX >> 8);
+                  if (r === 0) {
+                    this._A = (this._IX >> 8) & 0xf;
+                  } else if (r === 1) {
+                    this._B = (this._IX >> 8) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this._IX >> 8);
+                  } else {
+                    this.set_mem(this._IY, this._IX >> 8);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1164,7 +1515,15 @@ export class CPU {
                   // ld_r_xh
                   // r←XH
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r]((this._IX >> 4) & 0x00f);
+                  if (r === 0) {
+                    this._A = (this._IX >> 4) & 0x00f & 0xf;
+                  } else if (r === 1) {
+                    this._B = (this._IX >> 4) & 0x00f & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, (this._IX >> 4) & 0x00f);
+                  } else {
+                    this.set_mem(this._IY, (this._IX >> 4) & 0x00f);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1174,7 +1533,15 @@ export class CPU {
                   // ld_r_xl
                   // r←XL
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._IX & 0x00f);
+                  if (r === 0) {
+                    this._A = this._IX & 0x00f & 0xf;
+                  } else if (r === 1) {
+                    this._B = this._IX & 0x00f & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this._IX & 0x00f);
+                  } else {
+                    this.set_mem(this._IY, this._IX & 0x00f);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1184,7 +1551,15 @@ export class CPU {
                   // ld_r_yp
                   // r←YP
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._IY >> 8);
+                  if (r === 0) {
+                    this._A = (this._IY >> 8) & 0xf;
+                  } else if (r === 1) {
+                    this._B = (this._IY >> 8) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this._IY >> 8);
+                  } else {
+                    this.set_mem(this._IY, this._IY >> 8);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1194,7 +1569,15 @@ export class CPU {
                   // ld_r_yh
                   // r←YH
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r]((this._IY >> 4) & 0x00f);
+                  if (r === 0) {
+                    this._A = (this._IY >> 4) & 0x00f & 0xf;
+                  } else if (r === 1) {
+                    this._B = (this._IY >> 4) & 0x00f & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, (this._IY >> 4) & 0x00f);
+                  } else {
+                    this.set_mem(this._IY, (this._IY >> 4) & 0x00f);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1204,7 +1587,15 @@ export class CPU {
                   // ld_r_yl
                   // r←YL
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._IY & 0x00f);
+                  if (r === 0) {
+                    this._A = this._IY & 0x00f & 0xf;
+                  } else if (r === 1) {
+                    this._B = this._IY & 0x00f & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this._IY & 0x00f);
+                  } else {
+                    this.set_mem(this._IY, this._IY & 0x00f);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1220,7 +1611,47 @@ export class CPU {
                   // r←q
                   const r = (opcode >> 2) & 0x3;
                   const q = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._get_abmxmy_tbl[q]());
+                  if (r === 0) {
+                    this._A =
+                      (q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY)) & 0xf;
+                  } else if (r === 1) {
+                    this._B =
+                      (q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY)) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(
+                      this._IX,
+                      q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY),
+                    );
+                  } else {
+                    this.set_mem(
+                      this._IY,
+                      q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY),
+                    );
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1236,7 +1667,47 @@ export class CPU {
                   // r←q, X←X+1
                   const r = (opcode >> 2) & 0x3;
                   const q = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._get_abmxmy_tbl[q]());
+                  if (r === 0) {
+                    this._A =
+                      (q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY)) & 0xf;
+                  } else if (r === 1) {
+                    this._B =
+                      (q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY)) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(
+                      this._IX,
+                      q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY),
+                    );
+                  } else {
+                    this.set_mem(
+                      this._IY,
+                      q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY),
+                    );
+                  }
                   this._IX = (this._IX & 0xf00) | ((this._IX + 1) & 0xff);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
@@ -1248,7 +1719,47 @@ export class CPU {
                   // r←q, Y←Y+1
                   const r = (opcode >> 2) & 0x3;
                   const q = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._get_abmxmy_tbl[q]());
+                  if (r === 0) {
+                    this._A =
+                      (q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY)) & 0xf;
+                  } else if (r === 1) {
+                    this._B =
+                      (q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY)) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(
+                      this._IX,
+                      q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY),
+                    );
+                  } else {
+                    this.set_mem(
+                      this._IY,
+                      q === 0
+                        ? this._A
+                        : q === 1
+                          ? this._B
+                          : q === 2
+                            ? this.get_mem(this._IX)
+                            : this.get_mem(this._IY),
+                    );
+                  }
                   this._IY = (this._IY & 0xf00) | ((this._IY + 1) & 0xff);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
@@ -1268,7 +1779,21 @@ export class CPU {
               // r-q
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
-              const cp = this._get_abmxmy_tbl[r]() - this._get_abmxmy_tbl[q]();
+              const cp =
+                (r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) -
+                (q === 0
+                  ? this._A
+                  : q === 1
+                    ? this._B
+                    : q === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY));
               this._ZF = cp === 0 ? 1 : 0;
               this._CF = cp < 0 ? 1 : 0;
               this._PC = this._NPC =
@@ -1282,7 +1807,21 @@ export class CPU {
               const r = (opcode >> 2) & 0x3;
               const q = opcode & 0x3;
               this._ZF =
-                (this._get_abmxmy_tbl[r]() & this._get_abmxmy_tbl[q]()) === 0
+                ((r === 0
+                  ? this._A
+                  : r === 1
+                    ? this._B
+                    : r === 2
+                      ? this.get_mem(this._IX)
+                      : this.get_mem(this._IY)) &
+                  (q === 0
+                    ? this._A
+                    : q === 1
+                      ? this._B
+                      : q === 2
+                        ? this.get_mem(this._IX)
+                        : this.get_mem(this._IY))) ===
+                0
                   ? 1
                   : 0;
               this._PC = this._NPC =
@@ -1303,7 +1842,13 @@ export class CPU {
                   const r = opcode & 0x3;
                   let res =
                     this.get_mem(this._IX) +
-                    this._get_abmxmy_tbl[r]() +
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) +
                     this._CF;
                   this._CF = res > 15 ? 1 : 0;
                   if (this._DF && res > 9) {
@@ -1324,7 +1869,13 @@ export class CPU {
                   const r = opcode & 0x3;
                   let res =
                     this.get_mem(this._IY) +
-                    this._get_abmxmy_tbl[r]() +
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) +
                     this._CF;
                   this._CF = res > 15 ? 1 : 0;
                   if (this._DF && res > 9) {
@@ -1355,7 +1906,13 @@ export class CPU {
                   const r = opcode & 0x3;
                   let res =
                     this.get_mem(this._IX) -
-                    this._get_abmxmy_tbl[r]() -
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) -
                     this._CF;
                   this._CF = res < 0 ? 1 : 0;
                   if (this._DF && res < 0) {
@@ -1375,7 +1932,13 @@ export class CPU {
                   const r = opcode & 0x3;
                   let res =
                     this.get_mem(this._IY) -
-                    this._get_abmxmy_tbl[r]() -
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) -
                     this._CF;
                   this._CF = res < 0 ? 1 : 0;
                   if (this._DF && res < 0) {
@@ -1489,7 +2052,16 @@ export class CPU {
                   // SP←SP-1, M(SP)←r
                   const r = opcode & 0x3;
                   this._SP = (this._SP - 1) & 0xff;
-                  this.set_mem(this._SP, this._get_abmxmy_tbl[r]());
+                  this.set_mem(
+                    this._SP,
+                    r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY),
+                  );
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1596,7 +2168,15 @@ export class CPU {
                 case 0x3: {
                   // r←M(SP), SP←SP+1
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this.get_mem(this._SP));
+                  if (r === 0) {
+                    this._A = this.get_mem(this._SP) & 0xf;
+                  } else if (r === 1) {
+                    this._B = this.get_mem(this._SP) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this.get_mem(this._SP));
+                  } else {
+                    this.set_mem(this._IY, this.get_mem(this._SP));
+                  }
                   this._SP = (this._SP + 1) & 0xff;
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
@@ -1731,7 +2311,15 @@ export class CPU {
                   // SPH←r
                   const r = opcode & 0x3;
                   this._SP =
-                    (this._get_abmxmy_tbl[r]() << 4) | (this._SP & 0x0f);
+                    ((r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) <<
+                      4) |
+                    (this._SP & 0x0f);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1743,7 +2331,15 @@ export class CPU {
                 case 0x7: {
                   // r←SPH
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._SP >> 4);
+                  if (r === 0) {
+                    this._A = (this._SP >> 4) & 0xf;
+                  } else if (r === 1) {
+                    this._B = (this._SP >> 4) & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this._SP >> 4);
+                  } else {
+                    this.set_mem(this._IY, this._SP >> 4);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1772,7 +2368,15 @@ export class CPU {
                 case 0x3: {
                   // SPL←r
                   const r = opcode & 0x3;
-                  this._SP = this._get_abmxmy_tbl[r]() | (this._SP & 0xf0);
+                  this._SP =
+                    (r === 0
+                      ? this._A
+                      : r === 1
+                        ? this._B
+                        : r === 2
+                          ? this.get_mem(this._IX)
+                          : this.get_mem(this._IY)) |
+                    (this._SP & 0xf0);
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1784,7 +2388,15 @@ export class CPU {
                 case 0x7: {
                   // r←SPL
                   const r = opcode & 0x3;
-                  this._set_abmxmy_tbl[r](this._SP & 0x0f);
+                  if (r === 0) {
+                    this._A = this._SP & 0x0f & 0xf;
+                  } else if (r === 1) {
+                    this._B = this._SP & 0x0f & 0xf;
+                  } else if (r === 2) {
+                    this.set_mem(this._IX, this._SP & 0x0f);
+                  } else {
+                    this.set_mem(this._IY, this._SP & 0x0f);
+                  }
                   this._PC = this._NPC =
                     (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
                   exec_cycles = 5;
