@@ -156,7 +156,7 @@ const IO_ALON = 4;
 // const IO_LC2 = 4; // Unused
 // const IO_LC1 = 2; // Unused
 // const IO_LC0 = 1; // Unused
-const IO_SVDDT = 8;
+
 // const IO_SVDON = 4; // Unused
 // const IO_SVC1 = 2; // Unused
 // const IO_SVC0 = 1; // Unused
@@ -224,27 +224,85 @@ let _if_delay = false;
 let _instr_counter = 0;
 let _ROM_data = null;
 let _RAM = null;
+let _ROM = null;
+let _sound = null;
+let _port_pullup = null;
+let _p3_dedicated = 0;
+let _OSC1_clock_div = 0;
+let _OSC1_counter = 0;
+let _timer_counter = 0;
+let _ptimer_counter = 0;
+let _stopwatch_counter = 0;
+
+let _VRAM = null;
+let _VRAM_words = null;
+let _P0_OUTPUT_DATA = 0;
+let _P1_OUTPUT_DATA = 0;
+let _P2_OUTPUT_DATA = 0;
+let _P3_OUTPUT_DATA = 0;
+let _IT = 0;
+let _ISW = 0;
+let _IPT = 0;
+let _ISIO = 0;
+let _IK0 = 0;
+let _IK1 = 0;
+let _EIT = 0;
+let _EISW = 0;
+let _EIPT = 0;
+let _EISIO = 0;
+let _EIK0 = 0;
+let _EIK1 = 0;
+let _TM = 0;
+let _SWL = 0;
+let _SWH = 0;
+let _PT = 0;
+let _PRD = 0;
+let _RD = 0;
+let _SD = 0;
+let _K0 = 0;
+let _DFK0 = 0;
+let _K1 = 0;
+let _R0 = 0;
+let _R1 = 0;
+let _R2 = 0;
+let _R3 = 0;
+let _R4 = 0;
+let _P0 = 0;
+let _P1 = 0;
+let _P2 = 0;
+let _P3 = 0;
+let _CTRL_OSC = 0;
+let _CTRL_LCD = 0;
+let _LC = 0;
+
+let _CTRL_BZ1 = 0;
+let _CTRL_BZ2 = 0;
+let _CTRL_SW = 0;
+let _CTRL_PT = 0;
+let _PTC = 0;
+
+let _IOC = 0;
+let _PUP = 0;
 
 // E0C6200
 export class CPU {
   constructor(rom, clock, toneGenerator) {
-    this._ROM = rom;
+    _ROM = rom;
     _ROM_data = rom._data;
-    this._sound = new Sound(OSC1_CLOCK, toneGenerator);
+    _sound = new Sound(OSC1_CLOCK, toneGenerator);
 
-    this._port_pullup = mask.port_pullup;
+    _port_pullup = mask.port_pullup;
 
-    this._p3_dedicated = mask.p3_dedicated;
+    _p3_dedicated = mask.p3_dedicated;
 
     this._initRegisters();
 
-    this._OSC1_clock_div = clock / OSC1_CLOCK;
+    _OSC1_clock_div = clock / OSC1_CLOCK;
 
-    this._OSC1_counter = 0;
-    this._timer_counter = 0;
-    this._ptimer_counter = 0;
-    this._stopwatch_counter = 0;
-    this._execution_counter = 0;
+    _OSC1_counter = 0;
+    _timer_counter = 0;
+    _ptimer_counter = 0;
+    _stopwatch_counter = 0;
     _instr_counter = 0;
 
     _if_delay = false;
@@ -270,56 +328,56 @@ export class CPU {
       RAM0: _RAM.slice(0, 256),
       RAM1: _RAM.slice(256, 512),
       RAM2: _RAM.slice(512, 640),
-      VRAM: this._VRAM.slice(),
+      VRAM: _VRAM.slice(),
       IORAM: [
-        this._IT,
-        this._ISW,
-        this._IPT,
-        this._ISIO,
-        this._IK0,
-        this._IK1,
-        this._EIT,
-        this._EISW,
-        this._EIPT,
-        this._EISIO,
-        this._EIK0,
-        this._EIK1,
-        this._TM & 0xF,
-        this._TM >> 4,
-        this._SWL,
-        this._SWH,
-        this._PT & 0xF,
-        this._PT >> 4,
-        this._RD & 0xF,
-        this._RD >> 4,
-        this._SD & 0xF,
-        this._SD >> 4,
-        this._K0,
-        this._DFK0,
-        this._K1,
-        this._R0,
-        this._R1,
-        this._R2,
-        this._R3,
-        this._R4,
-        this._P0,
-        this._P1,
-        this._P2,
-        this._P3,
-        this._CTRL_OSC,
-        this._CTRL_LCD,
-        this._LC,
-        this._CTRL_SVD,
-        this._CTRL_BZ1,
-        this._CTRL_BZ2,
+        _IT,
+        _ISW,
+        _IPT,
+        _ISIO,
+        _IK0,
+        _IK1,
+        _EIT,
+        _EISW,
+        _EIPT,
+        _EISIO,
+        _EIK0,
+        _EIK1,
+        _TM & 0xF,
+        _TM >> 4,
+        _SWL,
+        _SWH,
+        _PT & 0xF,
+        _PT >> 4,
+        _RD & 0xF,
+        _RD >> 4,
+        _SD & 0xF,
+        _SD >> 4,
+        _K0,
+        _DFK0,
+        _K1,
+        _R0,
+        _R1,
+        _R2,
+        _R3,
+        _R4,
+        _P0,
+        _P1,
+        _P2,
+        _P3,
+        _CTRL_OSC,
+        _CTRL_LCD,
+        _LC,
+        _CTRL_SVD,
+        _CTRL_BZ1,
+        _CTRL_BZ2,
         0,
-        this._CTRL_SW,
-        this._CTRL_PT,
-        this._PTC,
-        this._SC,
-        this._HZR,
-        this._IOC,
-        this._PUP
+        _CTRL_SW,
+        _CTRL_PT,
+        _PTC,
+        _SC,
+        _HZR,
+        _IOC,
+        _PUP
       ]
     };
   }
@@ -341,117 +399,109 @@ export class CPU {
     _IF = 0;
 
     _RAM = new Uint8Array(RAM_SIZE);
-    this._VRAM = new Uint8Array(VRAM_SIZE);
-    this._VRAM_words = new Uint16Array(this._VRAM.buffer);
+    _VRAM = new Uint8Array(VRAM_SIZE);
+    _VRAM_words = new Uint16Array(_VRAM.buffer);
 
     _HALT = 0;
 
-    this._P0_OUTPUT_DATA = 0;
-    this._P1_OUTPUT_DATA = 0;
-    this._P2_OUTPUT_DATA = 0;
-    this._P3_OUTPUT_DATA = 0;
+    _P0_OUTPUT_DATA = 0;
+    _P1_OUTPUT_DATA = 0;
+    _P2_OUTPUT_DATA = 0;
+    _P3_OUTPUT_DATA = 0;
 
-    this._IT = 0;
-    this._ISW = 0;
-    this._IPT = 0;
-    this._ISIO = 0;
-    this._IK0 = 0;
-    this._IK1 = 0;
-    this._EIT = 0;
-    this._EISW = 0;
-    this._EIPT = 0;
-    this._EISIO = 0;
-    this._EIK0 = 0;
-    this._EIK1 = 0;
-    this._TM = 0;
-    this._SWL = 0;
-    this._SWH = 0;
-    this._PT = 0;
-    this._RD = 0;
-    this._SD = 0;
-    this._K0 = this._port_pullup.K0;
-    this._DFK0 = 0xf;
-    this._K1 = this._port_pullup.K1;
-    this._R0 = 0;
-    this._R1 = 0;
-    this._R2 = 0;
-    this._R3 = 0;
-    this._R4 = 0xf;
-    this._P0 = 0;
-    this._P1 = 0;
-    this._P2 = 0;
-    this._P3 = 0;
-    this._CTRL_OSC = 0;
-    this._CTRL_LCD = IO_ALOFF;
-    this._LC = 0;
-    this._CTRL_SVD = IO_SVDDT;
-    this._CTRL_BZ1 = 0;
-    this._CTRL_BZ2 = 0;
-    this._CTRL_SW = 0;
-    this._CTRL_PT = 0;
-    this._PTC = 0;
-    this._SC = 0;
-    this._HZR = 0;
-    this._IOC = 0;
-    this._PUP = 0;
+    _IT = 0;
+    _ISW = 0;
+    _IPT = 0;
+    _ISIO = 0;
+    _IK0 = 0;
+    _IK1 = 0;
+    _EIT = 0;
+    _EISW = 0;
+    _EIPT = 0;
+    _EISIO = 0;
+    _EIK0 = 0;
+    _EIK1 = 0;
+    _TM = 0;
+    _SWL = 0;
+    _SWH = 0;
+    _PT = 0;
+    _RD = 0;
+    _SD = 0;
+    _K0 = _port_pullup.K0;
+    _DFK0 = 0xf;
+    _K1 = _port_pullup.K1;
+    _R0 = 0;
+    _R1 = 0;
+    _R2 = 0;
+    _R3 = 0;
+    _R4 = 0xf;
+    _P0 = 0;
+    _P1 = 0;
+    _P2 = 0;
+    _P3 = 0;
+    _CTRL_OSC = 0;
+    _CTRL_LCD = IO_ALOFF;
+    _LC = 0;
+    _CTRL_BZ1 = 0;
+    _CTRL_BZ2 = 0;
+    _CTRL_SW = 0;
+    _CTRL_PT = 0;
+    _PTC = 0;
+    _IOC = 0;
+    _PUP = 0;
   }
 
   reset() {
     this._initRegisters();
 
-    this._OSC1_counter = 0;
-    this._timer_counter = 0;
-    this._stopwatch_counter = 0;
-    this._execution_counter = 0;
+    _OSC1_counter = 0;
+    _timer_counter = 0;
+    _stopwatch_counter = 0;
 
-    this._sound.set_buzzer_off();
-    this._sound.set_envelope_off();
+    _sound.set_buzzer_off();
+    _sound.set_envelope_off();
   }
 
   pin_set(port, pin, level) {
     if (port === "K0") {
-      const new_K0 = (~(1 << pin) & this._K0) | (level << pin);
+      const new_K0 = (~(1 << pin) & _K0) | (level << pin);
 
-      if (
-        this._EIK0 &&
-        this._DFK0 >> pin !== level &&
-        this._K0 >> pin !== level
-      ) {
-        this._IK0 |= IO_IK0;
+      if (_EIK0 && _DFK0 >> pin !== level && _K0 >> pin !== level) {
+        _IK0 |= IO_IK0;
       }
 
       if (
         pin === 3 &&
-        (this._PTC & IO_PTC) < 2 &&
-        this._DFK0 >> pin !== level &&
-        this._K0 >> pin !== level
+        (_PTC & IO_PTC) < 2 &&
+        _DFK0 >> pin !== level &&
+        _K0 >> pin !== level
       ) {
         this._process_ptimer();
       }
 
-      this._K0 = new_K0;
+      _K0 = new_K0;
     }
     if (port === "K1") {
-      const new_K1 = (~(1 << pin) & this._K1) | (level << pin);
-      if (this._EIK1 && level === 0 && this._K1 >> pin !== level) {
-        this._IK1 |= IO_IK1;
+      const new_K1 = (~(1 << pin) & _K1) | (level << pin);
+      if (_EIK1 && level === 0 && _K1 >> pin !== level) {
+        _IK1 |= IO_IK1;
       }
-      this._K1 = new_K1;
+      _K1 = new_K1;
     } else if (port === "P0") {
-      if (!(this._IOC & IO_IOC0)) {
-        this._P0 = (~(1 << pin) & this._P0) | (level << pin);
+      if (!(_IOC & IO_IOC0)) {
+        _P0 = (~(1 << pin) & _P0) | (level << pin);
       }
     } else if (port === "P1") {
-      if (!(this._IOC & IO_IOC1)) {
-        this._P1 = (~(1 << pin) & this._P1) | (level << pin);
+      if (!(_IOC & IO_IOC1)) {
+        _P1 = (~(1 << pin) & _P1) | (level << pin);
       }
     } else if (port === "P2") {
-      if (!(this._IOC & IO_IOC2)) {
-        this._P2 = (~(1 << pin) & this._P2) | (level << pin);
+      if (!(_IOC & IO_IOC2)) {
+        _P2 = (~(1 << pin) & _P2) | (level << pin);
       }
     } else if (port === "P3") {
-      if (!(this._IOC & IO_IOC3) && !this._p3_dedicated) {
-        this._P3 = (~(1 << pin) & this._P3) | (level << pin);
+      if (!(_IOC & IO_IOC3) && !_p3_dedicated) {
+        _P3 = (~(1 << pin) & _P3) | (level << pin);
       }
     } else if (port === "RES") {
       this.reset();
@@ -461,50 +511,46 @@ export class CPU {
 
   pin_release(port, pin) {
     if (port === "K0") {
-      const level = (this._port_pullup.K0 >> pin) & 0x1;
-      const new_K0 = (~(1 << pin) & this._K0) | (level << pin);
+      const level = (_port_pullup.K0 >> pin) & 0x1;
+      const new_K0 = (~(1 << pin) & _K0) | (level << pin);
 
-      if (
-        this._EIK0 &&
-        this._DFK0 >> pin !== level &&
-        this._K0 >> pin !== level
-      ) {
-        this._IK0 |= IO_IK0;
+      if (_EIK0 && _DFK0 >> pin !== level && _K0 >> pin !== level) {
+        _IK0 |= IO_IK0;
       }
 
       if (
         pin === 3 &&
-        (this._PTC & IO_PTC) < 2 &&
-        this._DFK0 >> pin !== level &&
-        this._K0 >> pin !== level
+        (_PTC & IO_PTC) < 2 &&
+        _DFK0 >> pin !== level &&
+        _K0 >> pin !== level
       ) {
         this._process_ptimer();
       }
 
-      this._K0 = new_K0;
+      _K0 = new_K0;
     }
     if (port === "K1") {
-      const level = (this._port_pullup.K1 >> pin) & 0x1;
-      const new_K1 = (~(1 << pin) & this._K1) | (level << pin);
-      if (this._EIK1 && level === 0 && this._K1 >> pin !== level) {
-        this._IK1 |= IO_IK1;
+      const level = (_port_pullup.K1 >> pin) & 0x1;
+      const new_K1 = (~(1 << pin) & _K1) | (level << pin);
+      if (_EIK1 && level === 0 && _K1 >> pin !== level) {
+        _IK1 |= IO_IK1;
       }
-      this._K1 = new_K1;
+      _K1 = new_K1;
     } else if (port === "P0") {
-      if (!(this._IOC & IO_IOC0)) {
-        this._P0 = (~(1 << pin) & this._P0) | (this._PUP & IO_PUP0);
+      if (!(_IOC & IO_IOC0)) {
+        _P0 = (~(1 << pin) & _P0) | (_PUP & IO_PUP0);
       }
     } else if (port === "P1") {
-      if (!(this._IOC & IO_IOC1)) {
-        this._P1 = (~(1 << pin) & this._P1) | (this._PUP & IO_PUP1);
+      if (!(_IOC & IO_IOC1)) {
+        _P1 = (~(1 << pin) & _P1) | (_PUP & IO_PUP1);
       }
     } else if (port === "P2") {
-      if (!(this._IOC & IO_IOC2)) {
-        this._P2 = (~(1 << pin) & this._P2) | (this._PUP & IO_PUP2);
+      if (!(_IOC & IO_IOC2)) {
+        _P2 = (~(1 << pin) & _P2) | (_PUP & IO_PUP2);
       }
     } else if (port === "P3") {
-      if (!(this._IOC & IO_IOC3) && !this._p3_dedicated) {
-        this._P3 = (~(1 << pin) & this._P3) | (this._PUP & IO_PUP3);
+      if (!(_IOC & IO_IOC3) && !_p3_dedicated) {
+        _P3 = (~(1 << pin) & _P3) | (_PUP & IO_PUP3);
       }
     } else if (port === "RES") {
       _RESET = 0;
@@ -516,27 +562,27 @@ export class CPU {
   }
 
   get_VRAM() {
-    if ((this._CTRL_LCD & IO_ALOFF) | _RESET) {
+    if ((_CTRL_LCD & IO_ALOFF) | _RESET) {
       return EMPTY_VRAM;
     }
-    if (this._CTRL_LCD & IO_ALON) {
+    if (_CTRL_LCD & IO_ALON) {
       return FULL_VRAM;
     }
-    return this._VRAM;
+    return _VRAM;
   }
 
   get_VRAM_words() {
-    if ((this._CTRL_LCD & IO_ALOFF) | _RESET) {
+    if ((_CTRL_LCD & IO_ALOFF) | _RESET) {
       return EMPTY_VRAM_WORDS;
     }
-    if (this._CTRL_LCD & IO_ALON) {
+    if (_CTRL_LCD & IO_ALON) {
       return FULL_VRAM_WORDS;
     }
-    return this._VRAM_words;
+    return _VRAM_words;
   }
 
   get_ROM() {
-    return this._ROM;
+    return _ROM;
   }
 
   istr_counter() {
@@ -2377,28 +2423,28 @@ export class CPU {
     }
 
     if (_IF && !_if_delay) {
-      if (this._IPT & this._EIPT) {
+      if (_IPT & _EIPT) {
         exec_cycles += this._interrupt(0xc);
-      } else if (this._ISIO & this._EISIO) {
+      } else if (_ISIO & _EISIO) {
         exec_cycles += this._interrupt(0xa);
-      } else if (this._IK1) {
+      } else if (_IK1) {
         exec_cycles += this._interrupt(0x8);
-      } else if (this._IK0) {
+      } else if (_IK0) {
         exec_cycles += this._interrupt(0x6);
-      } else if (this._ISW & this._EISW) {
+      } else if (_ISW & _EISW) {
         exec_cycles += this._interrupt(0x4);
-      } else if (this._IT & this._EIT) {
+      } else if (_IT & _EIT) {
         exec_cycles += this._interrupt(0x2);
       }
     }
 
-    if (!(this._CTRL_OSC & IO_CLKCHG)) {
-      exec_cycles *= this._OSC1_clock_div;
+    if (!(_CTRL_OSC & IO_CLKCHG)) {
+      exec_cycles *= _OSC1_clock_div;
     }
 
-    this._OSC1_counter -= exec_cycles;
-    while (this._OSC1_counter <= 0) {
-      this._OSC1_counter += this._OSC1_clock_div;
+    _OSC1_counter -= exec_cycles;
+    while (_OSC1_counter <= 0) {
+      _OSC1_counter += _OSC1_clock_div;
       this._clock_OSC1();
     }
 
@@ -2406,68 +2452,68 @@ export class CPU {
   }
 
   _clock_OSC1() {
-    this._sound.clock();
+    _sound.clock();
 
-    if ((this._PTC & IO_PTC) > 1) {
-      this._ptimer_counter -= 1;
-      if (this._ptimer_counter <= 0) {
-        this._ptimer_counter += PTIMER_CLOCK_DIV[this._PTC & IO_PTC];
+    if ((_PTC & IO_PTC) > 1) {
+      _ptimer_counter -= 1;
+      if (_ptimer_counter <= 0) {
+        _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
         this._process_ptimer();
       }
     }
 
-    this._stopwatch_counter -= 1;
-    if (this._stopwatch_counter <= 0) {
-      this._stopwatch_counter += STOPWATCH_CLOCK_DIV;
+    _stopwatch_counter -= 1;
+    if (_stopwatch_counter <= 0) {
+      _stopwatch_counter += STOPWATCH_CLOCK_DIV;
       this._process_stopwatch();
     }
 
-    this._timer_counter -= 1;
-    if (this._timer_counter <= 0) {
-      this._timer_counter += TIMER_CLOCK_DIV;
+    _timer_counter -= 1;
+    if (_timer_counter <= 0) {
+      _timer_counter += TIMER_CLOCK_DIV;
       this._process_timer();
     }
   }
 
   _process_ptimer() {
-    this._PT = (this._PT - 1) & 0xff;
-    if (this._PT === 0) {
-      this._PT = this._RD;
-      this._IPT |= IO_IPT;
+    _PT = (_PT - 1) & 0xff;
+    if (_PT === 0) {
+      _PT = _RD;
+      _IPT |= IO_IPT;
     }
-    if (this._PTC & IO_PTCOUT) {
-      this._R3 ^= IO_R33;
+    if (_PTC & IO_PTCOUT) {
+      _R3 ^= IO_R33;
     }
   }
 
   _process_stopwatch() {
-    if (this._CTRL_SW & IO_SWRUN) {
-      this._SWL = (this._SWL + 1) % 10;
-      if (this._SWL === 0) {
-        this._SWH = (this._SWH + 1) % 10;
-        this._ISW |= IO_ISW1;
-        if (this._SWH === 0) {
-          this._ISW |= IO_ISW0;
+    if (_CTRL_SW & IO_SWRUN) {
+      _SWL = (_SWL + 1) % 10;
+      if (_SWL === 0) {
+        _SWH = (_SWH + 1) % 10;
+        _ISW |= IO_ISW1;
+        if (_SWH === 0) {
+          _ISW |= IO_ISW0;
         }
       }
     }
   }
 
   _process_timer() {
-    const new_TM = (this._TM + 1) & 0xff;
-    if ((new_TM & IO_TM2) < (this._TM & IO_TM2)) {
-      this._IT |= IO_IT32;
+    const new_TM = (_TM + 1) & 0xff;
+    if ((new_TM & IO_TM2) < (_TM & IO_TM2)) {
+      _IT |= IO_IT32;
     }
-    if (((new_TM >> 4) & IO_TM4) < ((this._TM >> 4) & IO_TM4)) {
-      this._IT |= IO_IT8;
+    if (((new_TM >> 4) & IO_TM4) < ((_TM >> 4) & IO_TM4)) {
+      _IT |= IO_IT8;
     }
-    if (((new_TM >> 4) & IO_TM6) < ((this._TM >> 4) & IO_TM6)) {
-      this._IT |= IO_IT2;
+    if (((new_TM >> 4) & IO_TM6) < ((_TM >> 4) & IO_TM6)) {
+      _IT |= IO_IT2;
     }
-    if (((new_TM >> 4) & IO_TM7) < ((this._TM >> 4) & IO_TM7)) {
-      this._IT |= IO_IT1;
+    if (((new_TM >> 4) & IO_TM7) < ((_TM >> 4) & IO_TM7)) {
+      _IT |= IO_IT1;
     }
-    this._TM = new_TM;
+    _TM = new_TM;
   }
 
   _interrupt(vector) {
@@ -2487,128 +2533,127 @@ export class CPU {
     }
 
     if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
-      return this._VRAM[addr - VRAM_PART1_OFFSET];
+      return _VRAM[addr - VRAM_PART1_OFFSET];
     }
 
     if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
-      return this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE];
+      return _VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE];
     }
 
     if (addr >= IORAM_OFFSET && addr < IORAM_END) {
       switch (addr - IORAM_OFFSET) {
         case 0x00: {
-          const ret = this._IT;
-          this._IT = 0;
+          const ret = _IT;
+          _IT = 0;
           return ret;
         }
         case 0x01: {
-          const ret = this._ISW;
-          this._ISW = 0;
+          const ret = _ISW;
+          _ISW = 0;
           return ret;
         }
         case 0x02: {
-          const ret = this._IPT;
-          this._IPT = 0;
+          const ret = _IPT;
+          _IPT = 0;
           return ret;
         }
         case 0x03: {
-          const ret = this._ISIO;
-          this._ISIO = 0;
+          const ret = _ISIO;
+          _ISIO = 0;
           return ret;
         }
         case 0x04: {
-          const ret = this._IK0;
-          this._IK0 = 0;
+          const ret = _IK0;
+          _IK0 = 0;
           return ret;
         }
         case 0x05: {
-          const ret = this._IK1;
-          this._IK1 = 0;
+          const ret = _IK1;
+          _IK1 = 0;
           return ret;
         }
         case 0x10:
-          return this._EIT;
+          return _EIT;
         case 0x11:
-          return this._EISW;
+          return _EISW;
         case 0x12:
-          return this._EIPT;
+          return _EIPT;
         case 0x13:
-          return this._EISIO;
+          return _EISIO;
         case 0x14:
-          return this._EIK0;
+          return _EIK0;
         case 0x15:
-          return this._EIK1;
+          return _EIK1;
         case 0x20:
-          return this._TM & 0xf;
+          return _TM & 0xf;
         case 0x21:
-          return (this._TM >> 4) & 0xf;
+          return (_TM >> 4) & 0xf;
         case 0x22:
-          return this._SWL & 0xf;
+          return _SWL & 0xf;
         case 0x23:
-          return this._SWH & 0xf;
+          return _SWH & 0xf;
         case 0x24:
-          return this._PT & 0xf;
+          return _PT & 0xf;
         case 0x25:
-          return (this._PT >> 4) & 0xf;
+          return (_PT >> 4) & 0xf;
         case 0x26:
-          return this._PRD & 0xf; // TODO: _PRD does not exist?
+          return _PRD & 0xf; // TODO: _PRD does not exist?
         case 0x27:
-          return (this._RD >> 4) & 0xf;
+          return (_RD >> 4) & 0xf;
         case 0x30:
-          return this._SD & 0xf;
+          return _SD & 0xf;
         case 0x31:
-          return (this._SD >> 4) & 0xf;
+          return (_SD >> 4) & 0xf;
         case 0x40:
-          return this._K0;
+          return _K0;
         case 0x41:
-          return this._DFK0;
+          return _DFK0;
         case 0x42:
-          return this._K1;
+          return _K1;
         case 0x50:
-          return this._R0;
+          return _R0;
         case 0x51:
-          return this._R1;
+          return _R1;
         case 0x52:
-          return this._R2;
+          return _R2;
         case 0x53:
-          return this._R3;
+          return _R3;
         case 0x54:
-          return this._R4;
+          return _R4;
         case 0x60:
-          return this._P0;
+          return _P0;
         case 0x61:
-          return this._P1;
+          return _P1;
         case 0x62:
-          return this._P2;
+          return _P2;
         case 0x63:
-          return this._P3;
+          return _P3;
         case 0x70:
-          return this._CTRL_OSC;
+          return _CTRL_OSC;
         case 0x71:
-          return this._CTRL_LCD;
+          return _CTRL_LCD;
         case 0x72:
-          return this._LC;
+          return _LC;
         case 0x73:
           return 0;
         case 0x74:
-          return this._CTRL_BZ1;
+          return _CTRL_BZ1;
         case 0x75: {
-          const isOneShotRinging = this._sound.is_one_shot_ringing() ? 1 : 0;
+          const isOneShotRinging = _sound.is_one_shot_ringing() ? 1 : 0;
           return (
-            (this._CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) |
-            (IO_BZSHOT * isOneShotRinging)
+            (_CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) | (IO_BZSHOT * isOneShotRinging)
           );
         }
         case 0x77:
-          return this._CTRL_SW & IO_SWRUN;
+          return _CTRL_SW & IO_SWRUN;
         case 0x78:
-          return this._CTRL_PT & IO_PTRUN;
+          return _CTRL_PT & IO_PTRUN;
         case 0x79:
-          return this._PTC;
+          return _PTC;
         case 0x7d:
-          return this._IOC;
+          return _IOC;
         case 0x7e:
-          return this._PUP;
+          return _PUP;
         default:
           return 0;
       }
@@ -2621,163 +2666,163 @@ export class CPU {
     if (addr < RAM_SIZE) {
       _RAM[addr] = value & 0xf;
     } else if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
-      this._VRAM[addr - VRAM_PART1_OFFSET] = value & 0xf;
+      _VRAM[addr - VRAM_PART1_OFFSET] = value & 0xf;
     } else if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
-      this._VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
+      _VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
     } else if (addr >= IORAM_OFFSET && addr < IORAM_END) {
       switch (addr - IORAM_OFFSET) {
         case 0x10:
-          this._EIT = value;
+          _EIT = value;
           break;
         case 0x11:
-          this._EISW = value & 0x3;
+          _EISW = value & 0x3;
           break;
         case 0x12:
-          this._EIPT = value & 0x1;
+          _EIPT = value & 0x1;
           break;
         case 0x13:
-          this._EISIO = value & 0x1;
+          _EISIO = value & 0x1;
           break;
         case 0x14:
-          this._EIK0 = value;
+          _EIK0 = value;
           break;
         case 0x15:
-          this._EIK1 = value;
+          _EIK1 = value;
           break;
         case 0x26:
-          this._RD = (this._RD & 0xf0) | (value & 0x0f);
+          _RD = (_RD & 0xf0) | (value & 0x0f);
           break;
         case 0x27:
-          this._RD = (this._RD & 0x0f) | ((value << 4) & 0xf0);
+          _RD = (_RD & 0x0f) | ((value << 4) & 0xf0);
           break;
         case 0x30:
-          this._SD = (this._SD & 0xf0) | (value & 0x0f);
+          _SD = (_SD & 0xf0) | (value & 0x0f);
           break;
         case 0x31:
-          this._SD = (this._SD & 0x0f) | ((value << 4) & 0xf0);
+          _SD = (_SD & 0x0f) | ((value << 4) & 0xf0);
           break;
         case 0x50:
-          this._R0 = value;
+          _R0 = value;
           break;
         case 0x51:
-          this._R1 = value;
+          _R1 = value;
           break;
         case 0x52:
-          this._R2 = value;
+          _R2 = value;
           break;
         case 0x53:
-          this._R3 = value;
+          _R3 = value;
           break;
         case 0x54: {
-          this._R4 = value;
+          _R4 = value;
           if (value & IO_R43) {
-            this._sound.set_buzzer_off();
+            _sound.set_buzzer_off();
           } else {
-            this._sound.set_buzzer_on();
+            _sound.set_buzzer_on();
           }
           break;
         }
         case 0x60: {
-          this._P0_OUTPUT_DATA = value;
-          if (this._IOC & IO_IOC0) {
-            this._P0 = value;
+          _P0_OUTPUT_DATA = value;
+          if (_IOC & IO_IOC0) {
+            _P0 = value;
           }
           break;
         }
         case 0x61: {
-          this._P1_OUTPUT_DATA = value;
-          if (this._IOC & IO_IOC1) {
-            this._P1 = value;
+          _P1_OUTPUT_DATA = value;
+          if (_IOC & IO_IOC1) {
+            _P1 = value;
           }
           break;
         }
         case 0x62: {
-          this._P2_OUTPUT_DATA = value;
-          if (this._IOC & IO_IOC2) {
-            this._P2 = value;
+          _P2_OUTPUT_DATA = value;
+          if (_IOC & IO_IOC2) {
+            _P2 = value;
           }
           break;
         }
         case 0x63: {
-          this._P3_OUTPUT_DATA = value;
-          if (this._IOC & IO_IOC3 || this._p3_dedicated) {
-            this._P3 = value;
+          _P3_OUTPUT_DATA = value;
+          if (_IOC & IO_IOC3 || _p3_dedicated) {
+            _P3 = value;
           }
           break;
         }
         case 0x70:
-          this._CTRL_OSC = value;
+          _CTRL_OSC = value;
           break;
         case 0x71:
-          this._CTRL_LCD = value;
+          _CTRL_LCD = value;
           break;
         case 0x72:
-          this._LC = value;
+          _LC = value;
           break;
         case 0x74: {
-          this._CTRL_BZ1 = value;
-          this._sound.set_freq(this._CTRL_BZ1 & IO_BZFQ);
+          _CTRL_BZ1 = value;
+          _sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
           break;
         }
         case 0x75: {
-          this._CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
+          _CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
           const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
-          this._sound.set_envelope_cycle(cycle);
+          _sound.set_envelope_cycle(cycle);
           if (value & IO_BZSHOT) {
-            const duration = (this._CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
-            this._sound.one_shot(duration);
+            const duration = (_CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
+            _sound.one_shot(duration);
           }
           if (value & IO_ENVON) {
-            this._sound.set_envelope_on();
+            _sound.set_envelope_on();
           } else {
-            this._sound.set_envelope_off();
+            _sound.set_envelope_off();
           }
           if (value & IO_ENVRST) {
-            this._sound.reset_envelope();
+            _sound.reset_envelope();
           }
           break;
         }
         case 0x76: {
           if (value & IO_TMRST) {
-            this._TM = 0;
+            _TM = 0;
           }
           break;
         }
         case 0x77: {
           if (value & IO_SWRST) {
-            this._SWL = this._SWH = 0;
+            _SWL = _SWH = 0;
           }
-          this._CTRL_SW = value & IO_SWRUN;
+          _CTRL_SW = value & IO_SWRUN;
           break;
         }
         case 0x78: {
           if (value & IO_PTRST) {
-            this._PT = this._RD;
+            _PT = _RD;
           }
-          this._CTRL_PT = value & IO_PTRUN;
+          _CTRL_PT = value & IO_PTRUN;
           break;
         }
         case 0x79:
-          this._PTC = value;
+          _PTC = value;
           break;
         case 0x7d: {
-          this._IOC = value;
-          if (this._IOC & IO_IOC0) {
-            this._P0 = this._P0_OUTPUT_DATA;
+          _IOC = value;
+          if (_IOC & IO_IOC0) {
+            _P0 = _P0_OUTPUT_DATA;
           }
-          if (this._IOC & IO_IOC1) {
-            this._P1 = this._P1_OUTPUT_DATA;
+          if (_IOC & IO_IOC1) {
+            _P1 = _P1_OUTPUT_DATA;
           }
-          if (this._IOC & IO_IOC2) {
-            this._P2 = this._P2_OUTPUT_DATA;
+          if (_IOC & IO_IOC2) {
+            _P2 = _P2_OUTPUT_DATA;
           }
-          if (this._IOC & IO_IOC3) {
-            this._P3 = this._P3_OUTPUT_DATA;
+          if (_IOC & IO_IOC3) {
+            _P3 = _P3_OUTPUT_DATA;
           }
           break;
         }
         case 0x7e:
-          this._PUP = value;
+          _PUP = value;
           break;
       }
     }
