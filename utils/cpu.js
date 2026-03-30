@@ -284,6 +284,451 @@ let _PTC = 0;
 let _IOC = 0;
 let _PUP = 0;
 
+function _initRegisters() {
+  _A = 0;
+  _B = 0;
+  _IX = 0;
+  _IY = 0;
+  _SP = 0;
+
+  _PC = 0x100;
+  _NPC = 0x100;
+
+  _CF = 0;
+  _ZF = 0;
+  _DF = 0;
+  _IF = 0;
+
+  _RAM = new Uint8Array(RAM_SIZE);
+  _VRAM = new Uint8Array(VRAM_SIZE);
+  _VRAM_words = new Uint16Array(_VRAM.buffer);
+
+  _HALT = 0;
+
+  _P0_OUTPUT_DATA = 0;
+  _P1_OUTPUT_DATA = 0;
+  _P2_OUTPUT_DATA = 0;
+  _P3_OUTPUT_DATA = 0;
+
+  _IT = 0;
+  _ISW = 0;
+  _IPT = 0;
+  _ISIO = 0;
+  _IK0 = 0;
+  _IK1 = 0;
+  _EIT = 0;
+  _EISW = 0;
+  _EIPT = 0;
+  _EISIO = 0;
+  _EIK0 = 0;
+  _EIK1 = 0;
+  _TM = 0;
+  _SWL = 0;
+  _SWH = 0;
+  _PT = 0;
+  _RD = 0;
+  _SD = 0;
+  _K0 = _port_pullup.K0;
+  _DFK0 = 0xf;
+  _K1 = _port_pullup.K1;
+  _R0 = 0;
+  _R1 = 0;
+  _R2 = 0;
+  _R3 = 0;
+  _R4 = 0xf;
+  _P0 = 0;
+  _P1 = 0;
+  _P2 = 0;
+  _P3 = 0;
+  _CTRL_OSC = 0;
+  _CTRL_LCD = IO_ALOFF;
+  _LC = 0;
+  _CTRL_BZ1 = 0;
+  _CTRL_BZ2 = 0;
+  _CTRL_SW = 0;
+  _CTRL_PT = 0;
+  _PTC = 0;
+  _IOC = 0;
+  _PUP = 0;
+}
+
+function _clock_OSC1() {
+  _sound.clock();
+
+  if ((_PTC & IO_PTC) > 1) {
+    _ptimer_counter -= 1;
+    if (_ptimer_counter <= 0) {
+      _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
+      _process_ptimer();
+    }
+  }
+
+  _stopwatch_counter -= 1;
+  if (_stopwatch_counter <= 0) {
+    _stopwatch_counter += STOPWATCH_CLOCK_DIV;
+    _process_stopwatch();
+  }
+
+  _timer_counter -= 1;
+  if (_timer_counter <= 0) {
+    _timer_counter += TIMER_CLOCK_DIV;
+    _process_timer();
+  }
+}
+
+function _process_ptimer() {
+  _PT = (_PT - 1) & 0xff;
+  if (_PT === 0) {
+    _PT = _RD;
+    _IPT |= IO_IPT;
+  }
+  if (_PTC & IO_PTCOUT) {
+    _R3 ^= IO_R33;
+  }
+}
+
+function _process_stopwatch() {
+  if (_CTRL_SW & IO_SWRUN) {
+    _SWL = (_SWL + 1) % 10;
+    if (_SWL === 0) {
+      _SWH = (_SWH + 1) % 10;
+      _ISW |= IO_ISW1;
+      if (_SWH === 0) {
+        _ISW |= IO_ISW0;
+      }
+    }
+  }
+}
+
+function _process_timer() {
+  const new_TM = (_TM + 1) & 0xff;
+  if ((new_TM & IO_TM2) < (_TM & IO_TM2)) {
+    _IT |= IO_IT32;
+  }
+  if (((new_TM >> 4) & IO_TM4) < ((_TM >> 4) & IO_TM4)) {
+    _IT |= IO_IT8;
+  }
+  if (((new_TM >> 4) & IO_TM6) < ((_TM >> 4) & IO_TM6)) {
+    _IT |= IO_IT2;
+  }
+  if (((new_TM >> 4) & IO_TM7) < ((_TM >> 4) & IO_TM7)) {
+    _IT |= IO_IT1;
+  }
+  _TM = new_TM;
+}
+
+function _interrupt(vector) {
+  set_mem((_SP - 1) & 0xff, (_PC >> 8) & 0x0f);
+  set_mem((_SP - 2) & 0xff, (_PC >> 4) & 0x0f);
+  _SP = (_SP - 3) & 0xff;
+  set_mem(_SP, _PC & 0x0f);
+  _IF = 0;
+  _HALT = 0;
+  _PC = _NPC = (_NPC & 0x1000) | 0x0100 | vector;
+  return 13;
+}
+
+function get_mem(addr) {
+  if (addr < RAM_SIZE) {
+    return _RAM[addr];
+  }
+
+  if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
+    return _VRAM[addr - VRAM_PART1_OFFSET];
+  }
+
+  if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
+    return _VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE];
+  }
+
+  if (addr >= IORAM_OFFSET && addr < IORAM_END) {
+    switch (addr - IORAM_OFFSET) {
+      case 0x00: {
+        const ret = _IT;
+        _IT = 0;
+        return ret;
+      }
+      case 0x01: {
+        const ret = _ISW;
+        _ISW = 0;
+        return ret;
+      }
+      case 0x02: {
+        const ret = _IPT;
+        _IPT = 0;
+        return ret;
+      }
+      case 0x03: {
+        const ret = _ISIO;
+        _ISIO = 0;
+        return ret;
+      }
+      case 0x04: {
+        const ret = _IK0;
+        _IK0 = 0;
+        return ret;
+      }
+      case 0x05: {
+        const ret = _IK1;
+        _IK1 = 0;
+        return ret;
+      }
+      case 0x10:
+        return _EIT;
+      case 0x11:
+        return _EISW;
+      case 0x12:
+        return _EIPT;
+      case 0x13:
+        return _EISIO;
+      case 0x14:
+        return _EIK0;
+      case 0x15:
+        return _EIK1;
+      case 0x20:
+        return _TM & 0xf;
+      case 0x21:
+        return (_TM >> 4) & 0xf;
+      case 0x22:
+        return _SWL & 0xf;
+      case 0x23:
+        return _SWH & 0xf;
+      case 0x24:
+        return _PT & 0xf;
+      case 0x25:
+        return (_PT >> 4) & 0xf;
+      case 0x26:
+        return _PRD & 0xf; // TODO: _PRD does not exist?
+      case 0x27:
+        return (_RD >> 4) & 0xf;
+      case 0x30:
+        return _SD & 0xf;
+      case 0x31:
+        return (_SD >> 4) & 0xf;
+      case 0x40:
+        return _K0;
+      case 0x41:
+        return _DFK0;
+      case 0x42:
+        return _K1;
+      case 0x50:
+        return _R0;
+      case 0x51:
+        return _R1;
+      case 0x52:
+        return _R2;
+      case 0x53:
+        return _R3;
+      case 0x54:
+        return _R4;
+      case 0x60:
+        return _P0;
+      case 0x61:
+        return _P1;
+      case 0x62:
+        return _P2;
+      case 0x63:
+        return _P3;
+      case 0x70:
+        return _CTRL_OSC;
+      case 0x71:
+        return _CTRL_LCD;
+      case 0x72:
+        return _LC;
+      case 0x73:
+        return 0;
+      case 0x74:
+        return _CTRL_BZ1;
+      case 0x75: {
+        const isOneShotRinging = _sound.is_one_shot_ringing() ? 1 : 0;
+        return (
+          (_CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) | (IO_BZSHOT * isOneShotRinging)
+        );
+      }
+      case 0x77:
+        return _CTRL_SW & IO_SWRUN;
+      case 0x78:
+        return _CTRL_PT & IO_PTRUN;
+      case 0x79:
+        return _PTC;
+      case 0x7d:
+        return _IOC;
+      case 0x7e:
+        return _PUP;
+      default:
+        return 0;
+    }
+  }
+
+  return 0;
+}
+
+function set_mem(addr, value) {
+  if (addr < RAM_SIZE) {
+    _RAM[addr] = value & 0xf;
+  } else if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
+    _VRAM[addr - VRAM_PART1_OFFSET] = value & 0xf;
+  } else if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
+    _VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
+  } else if (addr >= IORAM_OFFSET && addr < IORAM_END) {
+    switch (addr - IORAM_OFFSET) {
+      case 0x10:
+        _EIT = value;
+        break;
+      case 0x11:
+        _EISW = value & 0x3;
+        break;
+      case 0x12:
+        _EIPT = value & 0x1;
+        break;
+      case 0x13:
+        _EISIO = value & 0x1;
+        break;
+      case 0x14:
+        _EIK0 = value;
+        break;
+      case 0x15:
+        _EIK1 = value;
+        break;
+      case 0x26:
+        _RD = (_RD & 0xf0) | (value & 0x0f);
+        break;
+      case 0x27:
+        _RD = (_RD & 0x0f) | ((value << 4) & 0xf0);
+        break;
+      case 0x30:
+        _SD = (_SD & 0xf0) | (value & 0x0f);
+        break;
+      case 0x31:
+        _SD = (_SD & 0x0f) | ((value << 4) & 0xf0);
+        break;
+      case 0x50:
+        _R0 = value;
+        break;
+      case 0x51:
+        _R1 = value;
+        break;
+      case 0x52:
+        _R2 = value;
+        break;
+      case 0x53:
+        _R3 = value;
+        break;
+      case 0x54: {
+        _R4 = value;
+        if (value & IO_R43) {
+          _sound.set_buzzer_off();
+        } else {
+          _sound.set_buzzer_on();
+        }
+        break;
+      }
+      case 0x60: {
+        _P0_OUTPUT_DATA = value;
+        if (_IOC & IO_IOC0) {
+          _P0 = value;
+        }
+        break;
+      }
+      case 0x61: {
+        _P1_OUTPUT_DATA = value;
+        if (_IOC & IO_IOC1) {
+          _P1 = value;
+        }
+        break;
+      }
+      case 0x62: {
+        _P2_OUTPUT_DATA = value;
+        if (_IOC & IO_IOC2) {
+          _P2 = value;
+        }
+        break;
+      }
+      case 0x63: {
+        _P3_OUTPUT_DATA = value;
+        if (_IOC & IO_IOC3 || _p3_dedicated) {
+          _P3 = value;
+        }
+        break;
+      }
+      case 0x70:
+        _CTRL_OSC = value;
+        break;
+      case 0x71:
+        _CTRL_LCD = value;
+        break;
+      case 0x72:
+        _LC = value;
+        break;
+      case 0x74: {
+        _CTRL_BZ1 = value;
+        _sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
+        break;
+      }
+      case 0x75: {
+        _CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
+        const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
+        _sound.set_envelope_cycle(cycle);
+        if (value & IO_BZSHOT) {
+          const duration = (_CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
+          _sound.one_shot(duration);
+        }
+        if (value & IO_ENVON) {
+          _sound.set_envelope_on();
+        } else {
+          _sound.set_envelope_off();
+        }
+        if (value & IO_ENVRST) {
+          _sound.reset_envelope();
+        }
+        break;
+      }
+      case 0x76: {
+        if (value & IO_TMRST) {
+          _TM = 0;
+        }
+        break;
+      }
+      case 0x77: {
+        if (value & IO_SWRST) {
+          _SWL = _SWH = 0;
+        }
+        _CTRL_SW = value & IO_SWRUN;
+        break;
+      }
+      case 0x78: {
+        if (value & IO_PTRST) {
+          _PT = _RD;
+        }
+        _CTRL_PT = value & IO_PTRUN;
+        break;
+      }
+      case 0x79:
+        _PTC = value;
+        break;
+      case 0x7d: {
+        _IOC = value;
+        if (_IOC & IO_IOC0) {
+          _P0 = _P0_OUTPUT_DATA;
+        }
+        if (_IOC & IO_IOC1) {
+          _P1 = _P1_OUTPUT_DATA;
+        }
+        if (_IOC & IO_IOC2) {
+          _P2 = _P2_OUTPUT_DATA;
+        }
+        if (_IOC & IO_IOC3) {
+          _P3 = _P3_OUTPUT_DATA;
+        }
+        break;
+      }
+      case 0x7e:
+        _PUP = value;
+        break;
+    }
+  }
+}
+
 // E0C6200
 export class CPU {
   constructor(rom, clock, toneGenerator) {
@@ -295,7 +740,7 @@ export class CPU {
 
     _p3_dedicated = mask.p3_dedicated;
 
-    this._initRegisters();
+    _initRegisters();
 
     _OSC1_clock_div = clock / OSC1_CLOCK;
 
@@ -383,76 +828,8 @@ export class CPU {
   }
   */
 
-  _initRegisters() {
-    _A = 0;
-    _B = 0;
-    _IX = 0;
-    _IY = 0;
-    _SP = 0;
-
-    _PC = 0x100;
-    _NPC = 0x100;
-
-    _CF = 0;
-    _ZF = 0;
-    _DF = 0;
-    _IF = 0;
-
-    _RAM = new Uint8Array(RAM_SIZE);
-    _VRAM = new Uint8Array(VRAM_SIZE);
-    _VRAM_words = new Uint16Array(_VRAM.buffer);
-
-    _HALT = 0;
-
-    _P0_OUTPUT_DATA = 0;
-    _P1_OUTPUT_DATA = 0;
-    _P2_OUTPUT_DATA = 0;
-    _P3_OUTPUT_DATA = 0;
-
-    _IT = 0;
-    _ISW = 0;
-    _IPT = 0;
-    _ISIO = 0;
-    _IK0 = 0;
-    _IK1 = 0;
-    _EIT = 0;
-    _EISW = 0;
-    _EIPT = 0;
-    _EISIO = 0;
-    _EIK0 = 0;
-    _EIK1 = 0;
-    _TM = 0;
-    _SWL = 0;
-    _SWH = 0;
-    _PT = 0;
-    _RD = 0;
-    _SD = 0;
-    _K0 = _port_pullup.K0;
-    _DFK0 = 0xf;
-    _K1 = _port_pullup.K1;
-    _R0 = 0;
-    _R1 = 0;
-    _R2 = 0;
-    _R3 = 0;
-    _R4 = 0xf;
-    _P0 = 0;
-    _P1 = 0;
-    _P2 = 0;
-    _P3 = 0;
-    _CTRL_OSC = 0;
-    _CTRL_LCD = IO_ALOFF;
-    _LC = 0;
-    _CTRL_BZ1 = 0;
-    _CTRL_BZ2 = 0;
-    _CTRL_SW = 0;
-    _CTRL_PT = 0;
-    _PTC = 0;
-    _IOC = 0;
-    _PUP = 0;
-  }
-
   reset() {
-    this._initRegisters();
+    _initRegisters();
 
     _OSC1_counter = 0;
     _timer_counter = 0;
@@ -476,7 +853,7 @@ export class CPU {
         _DFK0 >> pin !== level &&
         _K0 >> pin !== level
       ) {
-        this._process_ptimer();
+        _process_ptimer();
       }
 
       _K0 = new_K0;
@@ -524,7 +901,7 @@ export class CPU {
         _DFK0 >> pin !== level &&
         _K0 >> pin !== level
       ) {
-        this._process_ptimer();
+        _process_ptimer();
       }
 
       _K0 = new_K0;
@@ -624,11 +1001,8 @@ export class CPU {
             (_RAM[_SP + 1] << 4) |
             _RAM[_SP];
           _SP = (_SP + 3) & 0xff;
-          this.set_mem(_IX, opcode & 0x00f);
-          this.set_mem(
-            (_IX & 0xf00) | ((_IX + 1) & 0xff),
-            (opcode >> 4) & 0x00f,
-          );
+          set_mem(_IX, opcode & 0x00f);
+          set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0x00f);
           _IX = (_IX & 0xf00) | ((_IX + 2) & 0xff);
           exec_cycles = 12;
           break;
@@ -658,10 +1032,10 @@ export class CPU {
         case 0x4: {
           // call_s
           // M(SP-1)←PCP, M(SP-2)←PCSH, M(SP-3)←PCSL+1 SP←SP-3, PCP←NPP, PCS←s7~s0
-          this.set_mem((_SP - 1) & 0xff, ((_PC + 1) >> 8) & 0x0f);
-          this.set_mem((_SP - 2) & 0xff, ((_PC + 1) >> 4) & 0x0f);
+          set_mem((_SP - 1) & 0xff, ((_PC + 1) >> 8) & 0x0f);
+          set_mem((_SP - 2) & 0xff, ((_PC + 1) >> 4) & 0x0f);
           _SP = (_SP - 3) & 0xff;
-          this.set_mem(_SP, (_PC + 1) & 0x0f);
+          set_mem(_SP, (_PC + 1) & 0x0f);
           _PC = (_NPC & 0x1f00) | (opcode & 0x0ff);
           exec_cycles = 7;
           break;
@@ -669,10 +1043,10 @@ export class CPU {
         case 0x5: {
           // calz_s
           // M(SP-1)←PCP, M(SP-2)←PCSH, M(SP-3)←PCSL+1 SP←SP-3, PCP←0, PCS←s7~s0
-          this.set_mem((_SP - 1) & 0xff, ((_PC + 1) >> 8) & 0x0f);
-          this.set_mem((_SP - 2) & 0xff, ((_PC + 1) >> 4) & 0x0f);
+          set_mem((_SP - 1) & 0xff, ((_PC + 1) >> 8) & 0x0f);
+          set_mem((_SP - 2) & 0xff, ((_PC + 1) >> 4) & 0x0f);
           _SP = (_SP - 3) & 0xff;
-          this.set_mem(_SP, (_PC + 1) & 0x0f);
+          set_mem(_SP, (_PC + 1) & 0x0f);
           _PC = _NPC = (_NPC & 0x1000) | (opcode & 0x0ff);
           exec_cycles = 7;
           break;
@@ -710,11 +1084,8 @@ export class CPU {
         case 0x9: {
           // lbpx_mx_l
           // M(X)←l3~l0, M(X+1)←l7~l4, X←X+2
-          this.set_mem(_IX, opcode & 0x00f);
-          this.set_mem(
-            (_IX & 0xf00) | ((_IX + 1) & 0xff),
-            (opcode >> 4) & 0x00f,
-          );
+          set_mem(_IX, opcode & 0x00f);
+          set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0x00f);
           _IX = (_IX & 0xf00) | ((_IX + 2) & 0xff);
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 5;
@@ -817,15 +1188,15 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) +
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) +
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY));
+                      ? get_mem(_IX)
+                      : get_mem(_IY));
               _CF = res > 15 ? 1 : 0;
               if (_DF && res > 9) {
                 res += 6;
@@ -837,9 +1208,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -856,15 +1227,15 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) +
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) +
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) +
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) +
                 _CF;
               _CF = res > 15 ? 1 : 0;
               if (_DF && res > 9) {
@@ -877,9 +1248,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -896,15 +1267,15 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) -
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) -
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY));
+                      ? get_mem(_IX)
+                      : get_mem(_IY));
               _CF = res < 0 ? 1 : 0;
               if (_DF && res < 0) {
                 res += 10;
@@ -915,9 +1286,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -934,15 +1305,15 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) -
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) -
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) -
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) -
                 _CF;
               _CF = res < 0 ? 1 : 0;
               if (_DF && res < 0) {
@@ -954,9 +1325,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -973,24 +1344,24 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) &
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) &
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY));
+                      ? get_mem(_IX)
+                      : get_mem(_IY));
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
                 _A = res & 0xf;
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res);
+                set_mem(_IX, res);
               } else {
-                this.set_mem(_IY, res);
+                set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1007,24 +1378,24 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) |
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) |
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY));
+                      ? get_mem(_IX)
+                      : get_mem(_IY));
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
                 _A = res & 0xf;
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res);
+                set_mem(_IX, res);
               } else {
-                this.set_mem(_IY, res);
+                set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1041,24 +1412,24 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) ^
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) ^
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY));
+                      ? get_mem(_IX)
+                      : get_mem(_IY));
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
                 _A = res & 0xf;
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res);
+                set_mem(_IX, res);
               } else {
-                this.set_mem(_IY, res);
+                set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1074,8 +1445,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) <<
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) <<
                   1) +
                 _CF;
               _CF = res > 15 ? 1 : 0;
@@ -1084,9 +1455,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1115,8 +1486,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) +
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) +
                 (opcode & 0x00f);
               _CF = res > 15 ? 1 : 0;
               if (_DF && res > 9) {
@@ -1129,9 +1500,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1147,8 +1518,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) +
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) +
                 (opcode & 0x00f) +
                 _CF;
               _CF = res > 15 ? 1 : 0;
@@ -1162,9 +1533,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1180,8 +1551,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) &
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) &
                 opcode &
                 0x00f;
               _ZF = res === 0 ? 1 : 0;
@@ -1190,9 +1561,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res);
+                set_mem(_IX, res);
               } else {
-                this.set_mem(_IY, res);
+                set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1208,8 +1579,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) |
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) |
                 (opcode & 0x00f);
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
@@ -1217,9 +1588,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res);
+                set_mem(_IX, res);
               } else {
-                this.set_mem(_IY, res);
+                set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1240,8 +1611,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) ^
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) ^
                 (opcode & 0x00f);
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
@@ -1249,9 +1620,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res);
+                set_mem(_IX, res);
               } else {
-                this.set_mem(_IY, res);
+                set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1267,8 +1638,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) -
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) -
                 (opcode & 0x00f) -
                 _CF;
               _CF = res < 0 ? 1 : 0;
@@ -1281,9 +1652,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, res & 0xf);
+                set_mem(_IX, res & 0xf);
               } else {
-                this.set_mem(_IY, res & 0xf);
+                set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1299,8 +1670,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) &
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) &
                   opcode &
                   0x00f) ===
                 0
@@ -1320,8 +1691,8 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) -
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) -
                 (opcode & 0x00f);
               _ZF = cp === 0 ? 1 : 0;
               _CF = cp < 0 ? 1 : 0;
@@ -1343,9 +1714,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = opcode & 0x00f & 0xf;
               } else if (r === 2) {
-                this.set_mem(_IX, opcode & 0x00f);
+                set_mem(_IX, opcode & 0x00f);
               } else {
-                this.set_mem(_IY, opcode & 0x00f);
+                set_mem(_IY, opcode & 0x00f);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
@@ -1366,7 +1737,7 @@ export class CPU {
                 case 0x2: {
                   // ldpx_mx_i
                   // M(X)←i3~i0, X←X+1
-                  this.set_mem(_IX, opcode & 0x00f);
+                  set_mem(_IX, opcode & 0x00f);
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1375,7 +1746,7 @@ export class CPU {
                 case 0x3: {
                   // ldpy_my_i
                   // M(Y)←i3~i0, Y←Y+1
-                  this.set_mem(_IY, opcode & 0x00f);
+                  set_mem(_IY, opcode & 0x00f);
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1396,8 +1767,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) <<
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) <<
                       8) |
                     (_IX & 0x0ff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1414,8 +1785,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) <<
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) <<
                       4) |
                     (_IX & 0xf0f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1432,8 +1803,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) |
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) |
                     (_IX & 0xff0);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1449,8 +1820,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) +
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) +
                     (_CF << 4);
                   _CF = res & 0x1;
                   if (r === 0) {
@@ -1458,9 +1829,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (res >> 1) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, res >> 1);
+                    set_mem(_IX, res >> 1);
                   } else {
-                    this.set_mem(_IY, res >> 1);
+                    set_mem(_IY, res >> 1);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1476,8 +1847,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) <<
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) <<
                       8) |
                     (_IY & 0x0ff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1494,8 +1865,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) <<
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) <<
                       4) |
                     (_IY & 0xf0f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1512,8 +1883,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) |
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) |
                     (_IY & 0xff0);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1534,9 +1905,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IX >> 8) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, _IX >> 8);
+                    set_mem(_IX, _IX >> 8);
                   } else {
-                    this.set_mem(_IY, _IX >> 8);
+                    set_mem(_IY, _IX >> 8);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1551,9 +1922,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IX >> 4) & 0x00f & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, (_IX >> 4) & 0x00f);
+                    set_mem(_IX, (_IX >> 4) & 0x00f);
                   } else {
-                    this.set_mem(_IY, (_IX >> 4) & 0x00f);
+                    set_mem(_IY, (_IX >> 4) & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1568,9 +1939,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = _IX & 0x00f & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, _IX & 0x00f);
+                    set_mem(_IX, _IX & 0x00f);
                   } else {
-                    this.set_mem(_IY, _IX & 0x00f);
+                    set_mem(_IY, _IX & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1585,9 +1956,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IY >> 8) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, _IY >> 8);
+                    set_mem(_IX, _IY >> 8);
                   } else {
-                    this.set_mem(_IY, _IY >> 8);
+                    set_mem(_IY, _IY >> 8);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1602,9 +1973,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IY >> 4) & 0x00f & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, (_IY >> 4) & 0x00f);
+                    set_mem(_IX, (_IY >> 4) & 0x00f);
                   } else {
-                    this.set_mem(_IY, (_IY >> 4) & 0x00f);
+                    set_mem(_IY, (_IY >> 4) & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1619,9 +1990,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = _IY & 0x00f & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, _IY & 0x00f);
+                    set_mem(_IX, _IY & 0x00f);
                   } else {
-                    this.set_mem(_IY, _IY & 0x00f);
+                    set_mem(_IY, _IY & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1644,8 +2015,8 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY)) & 0xf;
+                            ? get_mem(_IX)
+                            : get_mem(_IY)) & 0xf;
                   } else if (r === 1) {
                     _B =
                       (q === 0
@@ -1653,29 +2024,29 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY)) & 0xf;
+                            ? get_mem(_IX)
+                            : get_mem(_IY)) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(
+                    set_mem(
                       _IX,
                       q === 0
                         ? _A
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY),
+                            ? get_mem(_IX)
+                            : get_mem(_IY),
                     );
                   } else {
-                    this.set_mem(
+                    set_mem(
                       _IY,
                       q === 0
                         ? _A
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY),
+                            ? get_mem(_IX)
+                            : get_mem(_IY),
                     );
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1699,8 +2070,8 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY)) & 0xf;
+                            ? get_mem(_IX)
+                            : get_mem(_IY)) & 0xf;
                   } else if (r === 1) {
                     _B =
                       (q === 0
@@ -1708,29 +2079,29 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY)) & 0xf;
+                            ? get_mem(_IX)
+                            : get_mem(_IY)) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(
+                    set_mem(
                       _IX,
                       q === 0
                         ? _A
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY),
+                            ? get_mem(_IX)
+                            : get_mem(_IY),
                     );
                   } else {
-                    this.set_mem(
+                    set_mem(
                       _IY,
                       q === 0
                         ? _A
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY),
+                            ? get_mem(_IX)
+                            : get_mem(_IY),
                     );
                   }
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
@@ -1750,8 +2121,8 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY)) & 0xf;
+                            ? get_mem(_IX)
+                            : get_mem(_IY)) & 0xf;
                   } else if (r === 1) {
                     _B =
                       (q === 0
@@ -1759,29 +2130,29 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY)) & 0xf;
+                            ? get_mem(_IX)
+                            : get_mem(_IY)) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(
+                    set_mem(
                       _IX,
                       q === 0
                         ? _A
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY),
+                            ? get_mem(_IX)
+                            : get_mem(_IY),
                     );
                   } else {
-                    this.set_mem(
+                    set_mem(
                       _IY,
                       q === 0
                         ? _A
                         : q === 1
                           ? _B
                           : q === 2
-                            ? this.get_mem(_IX)
-                            : this.get_mem(_IY),
+                            ? get_mem(_IX)
+                            : get_mem(_IY),
                     );
                   }
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
@@ -1808,15 +2179,15 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) -
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) -
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY));
+                      ? get_mem(_IX)
+                      : get_mem(_IY));
               _ZF = cp === 0 ? 1 : 0;
               _CF = cp < 0 ? 1 : 0;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1834,15 +2205,15 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? this.get_mem(_IX)
-                      : this.get_mem(_IY)) &
+                      ? get_mem(_IX)
+                      : get_mem(_IY)) &
                   (q === 0
                     ? _A
                     : q === 1
                       ? _B
                       : q === 2
-                        ? this.get_mem(_IX)
-                        : this.get_mem(_IY))) ===
+                        ? get_mem(_IX)
+                        : get_mem(_IY))) ===
                 0
                   ? 1
                   : 0;
@@ -1862,14 +2233,14 @@ export class CPU {
                   // M(X)←M(X)+r+C, X←X+1
                   const r = opcode & 0x3;
                   let res =
-                    this.get_mem(_IX) +
+                    get_mem(_IX) +
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) +
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) +
                     _CF;
                   _CF = res > 15 ? 1 : 0;
                   if (_DF && res > 9) {
@@ -1877,7 +2248,7 @@ export class CPU {
                     _CF = 1;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  this.set_mem(_IX, res & 0xf);
+                  set_mem(_IX, res & 0xf);
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -1888,14 +2259,14 @@ export class CPU {
                   // M(Y)←M(Y)+r+C, Y←Y+1
                   const r = opcode & 0x3;
                   let res =
-                    this.get_mem(_IY) +
+                    get_mem(_IY) +
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) +
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) +
                     _CF;
                   _CF = res > 15 ? 1 : 0;
                   if (_DF && res > 9) {
@@ -1903,7 +2274,7 @@ export class CPU {
                     _CF = 1;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  this.set_mem(_IY, res & 0xf);
+                  set_mem(_IY, res & 0xf);
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -1924,21 +2295,21 @@ export class CPU {
                   // M(X)←M(X)-r-C, X←X+1
                   const r = opcode & 0x3;
                   let res =
-                    this.get_mem(_IX) -
+                    get_mem(_IX) -
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) -
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) -
                     _CF;
                   _CF = res < 0 ? 1 : 0;
                   if (_DF && res < 0) {
                     res += 10;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  this.set_mem(_IX, res & 0xf);
+                  set_mem(_IX, res & 0xf);
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -1949,21 +2320,21 @@ export class CPU {
                   // M(Y)←M(Y)-r-C, Y←Y+1
                   const r = opcode & 0x3;
                   let res =
-                    this.get_mem(_IY) -
+                    get_mem(_IY) -
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) -
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) -
                     _CF;
                   _CF = res < 0 ? 1 : 0;
                   if (_DF && res < 0) {
                     res += 10;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  this.set_mem(_IY, res & 0xf);
+                  set_mem(_IY, res & 0xf);
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -2000,10 +2371,10 @@ export class CPU {
               // inc_mn
               // M(n3~n0)←M(n3~n0)+1
               const mn = opcode & 0x00f;
-              const res = this.get_mem(mn) + 1;
+              const res = get_mem(mn) + 1;
               _ZF = res === 16 ? 1 : 0;
               _CF = res > 15 ? 1 : 0;
-              this.set_mem(mn, res & 0xf);
+              set_mem(mn, res & 0xf);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
               break;
@@ -2012,10 +2383,10 @@ export class CPU {
               // dec_mn
               // M(n3~n0)←M(n3~n0)-1
               const mn = opcode & 0x00f;
-              const res = this.get_mem(mn) - 1;
+              const res = get_mem(mn) - 1;
               _ZF = res === 0 ? 1 : 0;
               _CF = res < 0 ? 1 : 0;
-              this.set_mem(mn, res & 0xf);
+              set_mem(mn, res & 0xf);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
               break;
@@ -2023,7 +2394,7 @@ export class CPU {
             case 0x8: {
               // ld_mn_a
               // M(n3~n0)←A
-              this.set_mem(opcode & 0x00f, _A & 0xf);
+              set_mem(opcode & 0x00f, _A & 0xf);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2031,7 +2402,7 @@ export class CPU {
             case 0x9: {
               // ld_mn_b
               // M(n3~n0)←B
-              this.set_mem(opcode & 0x00f, _B & 0xf);
+              set_mem(opcode & 0x00f, _B & 0xf);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2039,7 +2410,7 @@ export class CPU {
             case 0xa: {
               // ld_a_mn
               // A←M(n3~n0)
-              _A = this.get_mem(opcode & 0x00f);
+              _A = get_mem(opcode & 0x00f);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2047,7 +2418,7 @@ export class CPU {
             case 0xb: {
               // ld_b_mn
               // B←M(n3~n0)
-              _B = this.get_mem(opcode & 0x00f);
+              _B = get_mem(opcode & 0x00f);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2061,15 +2432,15 @@ export class CPU {
                   // SP←SP-1, M(SP)←r
                   const r = opcode & 0x3;
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(
+                  set_mem(
                     _SP,
                     r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY),
+                          ? get_mem(_IX)
+                          : get_mem(_IY),
                   );
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2079,7 +2450,7 @@ export class CPU {
                   // push_xp
                   // SP←SP-1, M(SP)←XP
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, _IX >> 8);
+                  set_mem(_SP, _IX >> 8);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2088,7 +2459,7 @@ export class CPU {
                   // push_xh
                   // SP←SP-1, M(SP)←XH
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, (_IX >> 4) & 0x00f);
+                  set_mem(_SP, (_IX >> 4) & 0x00f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2097,7 +2468,7 @@ export class CPU {
                   // push_xl
                   // SP←SP-1, M(SP)←XL
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, _IX & 0x00f);
+                  set_mem(_SP, _IX & 0x00f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2106,7 +2477,7 @@ export class CPU {
                   // push_yp
                   // SP←SP-1, M(SP)←YP
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, _IY >> 8);
+                  set_mem(_SP, _IY >> 8);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2115,7 +2486,7 @@ export class CPU {
                   // push_yh
                   // SP←SP-1, M(SP)←YH
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, (_IY >> 4) & 0x00f);
+                  set_mem(_SP, (_IY >> 4) & 0x00f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2124,7 +2495,7 @@ export class CPU {
                   // push_yl
                   // SP←SP-1, M(SP)←YL
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, _IY & 0x00f);
+                  set_mem(_SP, _IY & 0x00f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2133,7 +2504,7 @@ export class CPU {
                   // push_f
                   // SP←SP-1, M(SP)←F
                   _SP = (_SP - 1) & 0xff;
-                  this.set_mem(_SP, (_IF << 3) | (_DF << 2) | (_ZF << 1) | _CF);
+                  set_mem(_SP, (_IF << 3) | (_DF << 2) | (_ZF << 1) | _CF);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2163,13 +2534,13 @@ export class CPU {
                   // r←M(SP), SP←SP+1
                   const r = opcode & 0x3;
                   if (r === 0) {
-                    _A = this.get_mem(_SP) & 0xf;
+                    _A = get_mem(_SP) & 0xf;
                   } else if (r === 1) {
-                    _B = this.get_mem(_SP) & 0xf;
+                    _B = get_mem(_SP) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, this.get_mem(_SP));
+                    set_mem(_IX, get_mem(_SP));
                   } else {
-                    this.set_mem(_IY, this.get_mem(_SP));
+                    set_mem(_IY, get_mem(_SP));
                   }
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2179,7 +2550,7 @@ export class CPU {
                 case 0x4: {
                   // pop_xp
                   // XP←M(SP), SP←SP+1
-                  _IX = (this.get_mem(_SP) << 8) | (_IX & 0x0ff);
+                  _IX = (get_mem(_SP) << 8) | (_IX & 0x0ff);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2188,7 +2559,7 @@ export class CPU {
                 case 0x5: {
                   // pop_xh
                   // XH←M(SP), SP←SP+1
-                  _IX = (this.get_mem(_SP) << 4) | (_IX & 0xf0f);
+                  _IX = (get_mem(_SP) << 4) | (_IX & 0xf0f);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2197,7 +2568,7 @@ export class CPU {
                 case 0x6: {
                   // pop_xl
                   // XL←M(SP), SP←SP+1
-                  _IX = this.get_mem(_SP) | (_IX & 0xff0);
+                  _IX = get_mem(_SP) | (_IX & 0xff0);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2206,7 +2577,7 @@ export class CPU {
                 case 0x7: {
                   // pop_yp
                   // YP←M(SP), SP←SP+1
-                  _IY = (this.get_mem(_SP) << 8) | (_IY & 0x0ff);
+                  _IY = (get_mem(_SP) << 8) | (_IY & 0x0ff);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2215,7 +2586,7 @@ export class CPU {
                 case 0x8: {
                   // pop_yh
                   // YH←M(SP), SP←SP+1
-                  _IY = (this.get_mem(_SP) << 4) | (_IY & 0xf0f);
+                  _IY = (get_mem(_SP) << 4) | (_IY & 0xf0f);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2224,7 +2595,7 @@ export class CPU {
                 case 0x9: {
                   // pop_yl
                   // YL←M(SP), SP←SP+1
-                  _IY = this.get_mem(_SP) | (_IY & 0xff0);
+                  _IY = get_mem(_SP) | (_IY & 0xff0);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2233,7 +2604,7 @@ export class CPU {
                 case 0xa: {
                   // pop_f
                   // F←M(SP), SP←SP+1
-                  const f = this.get_mem(_SP);
+                  const f = get_mem(_SP);
                   _CF = f & 0x1;
                   _ZF = (f >> 1) & 0x1;
                   _DF = (f >> 2) & 0x1;
@@ -2263,9 +2634,9 @@ export class CPU {
                   // PCSL←M(SP), PCSH←M(SP+1), PCP←M(SP+2) SP←SP+3, PC←PC+1
                   _PC =
                     (_PC & 0x1000) |
-                    this.get_mem(_SP) |
-                    (this.get_mem(_SP + 1) << 4) |
-                    (this.get_mem(_SP + 2) << 8);
+                    get_mem(_SP) |
+                    (get_mem(_SP + 1) << 4) |
+                    (get_mem(_SP + 2) << 8);
                   _SP = (_SP + 3) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 12;
@@ -2276,9 +2647,9 @@ export class CPU {
                   // PCSL←M(SP), PCSH←M(SP+1), PCP←M(SP+2) SP←SP+3
                   _PC = _NPC =
                     (_PC & 0x1000) |
-                    this.get_mem(_SP) |
-                    (this.get_mem(_SP + 1) << 4) |
-                    (this.get_mem(_SP + 2) << 8);
+                    get_mem(_SP) |
+                    (get_mem(_SP + 1) << 4) |
+                    (get_mem(_SP + 2) << 8);
                   _SP = (_SP + 3) & 0xff;
                   exec_cycles = 7;
                   break;
@@ -2300,8 +2671,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) <<
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) <<
                       4) |
                     (_SP & 0x0f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2319,9 +2690,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_SP >> 4) & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, _SP >> 4);
+                    set_mem(_IX, _SP >> 4);
                   } else {
-                    this.set_mem(_IY, _SP >> 4);
+                    set_mem(_IY, _SP >> 4);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2356,8 +2727,8 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? this.get_mem(_IX)
-                          : this.get_mem(_IY)) |
+                          ? get_mem(_IX)
+                          : get_mem(_IY)) |
                     (_SP & 0xf0);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2374,9 +2745,9 @@ export class CPU {
                   } else if (r === 1) {
                     _B = _SP & 0x0f & 0xf;
                   } else if (r === 2) {
-                    this.set_mem(_IX, _SP & 0x0f);
+                    set_mem(_IX, _SP & 0x0f);
                   } else {
-                    this.set_mem(_IY, _SP & 0x0f);
+                    set_mem(_IY, _SP & 0x0f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2424,17 +2795,17 @@ export class CPU {
 
     if (_IF && !_if_delay) {
       if (_IPT & _EIPT) {
-        exec_cycles += this._interrupt(0xc);
+        exec_cycles += _interrupt(0xc);
       } else if (_ISIO & _EISIO) {
-        exec_cycles += this._interrupt(0xa);
+        exec_cycles += _interrupt(0xa);
       } else if (_IK1) {
-        exec_cycles += this._interrupt(0x8);
+        exec_cycles += _interrupt(0x8);
       } else if (_IK0) {
-        exec_cycles += this._interrupt(0x6);
+        exec_cycles += _interrupt(0x6);
       } else if (_ISW & _EISW) {
-        exec_cycles += this._interrupt(0x4);
+        exec_cycles += _interrupt(0x4);
       } else if (_IT & _EIT) {
-        exec_cycles += this._interrupt(0x2);
+        exec_cycles += _interrupt(0x2);
       }
     }
 
@@ -2445,387 +2816,18 @@ export class CPU {
     _OSC1_counter -= exec_cycles;
     while (_OSC1_counter <= 0) {
       _OSC1_counter += _OSC1_clock_div;
-      this._clock_OSC1();
+      _clock_OSC1();
     }
 
     return exec_cycles;
   }
 
-  _clock_OSC1() {
-    _sound.clock();
-
-    if ((_PTC & IO_PTC) > 1) {
-      _ptimer_counter -= 1;
-      if (_ptimer_counter <= 0) {
-        _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
-        this._process_ptimer();
-      }
-    }
-
-    _stopwatch_counter -= 1;
-    if (_stopwatch_counter <= 0) {
-      _stopwatch_counter += STOPWATCH_CLOCK_DIV;
-      this._process_stopwatch();
-    }
-
-    _timer_counter -= 1;
-    if (_timer_counter <= 0) {
-      _timer_counter += TIMER_CLOCK_DIV;
-      this._process_timer();
-    }
-  }
-
-  _process_ptimer() {
-    _PT = (_PT - 1) & 0xff;
-    if (_PT === 0) {
-      _PT = _RD;
-      _IPT |= IO_IPT;
-    }
-    if (_PTC & IO_PTCOUT) {
-      _R3 ^= IO_R33;
-    }
-  }
-
-  _process_stopwatch() {
-    if (_CTRL_SW & IO_SWRUN) {
-      _SWL = (_SWL + 1) % 10;
-      if (_SWL === 0) {
-        _SWH = (_SWH + 1) % 10;
-        _ISW |= IO_ISW1;
-        if (_SWH === 0) {
-          _ISW |= IO_ISW0;
-        }
-      }
-    }
-  }
-
-  _process_timer() {
-    const new_TM = (_TM + 1) & 0xff;
-    if ((new_TM & IO_TM2) < (_TM & IO_TM2)) {
-      _IT |= IO_IT32;
-    }
-    if (((new_TM >> 4) & IO_TM4) < ((_TM >> 4) & IO_TM4)) {
-      _IT |= IO_IT8;
-    }
-    if (((new_TM >> 4) & IO_TM6) < ((_TM >> 4) & IO_TM6)) {
-      _IT |= IO_IT2;
-    }
-    if (((new_TM >> 4) & IO_TM7) < ((_TM >> 4) & IO_TM7)) {
-      _IT |= IO_IT1;
-    }
-    _TM = new_TM;
-  }
-
-  _interrupt(vector) {
-    this.set_mem((_SP - 1) & 0xff, (_PC >> 8) & 0x0f);
-    this.set_mem((_SP - 2) & 0xff, (_PC >> 4) & 0x0f);
-    _SP = (_SP - 3) & 0xff;
-    this.set_mem(_SP, _PC & 0x0f);
-    _IF = 0;
-    _HALT = 0;
-    _PC = _NPC = (_NPC & 0x1000) | 0x0100 | vector;
-    return 13;
-  }
-
   get_mem(addr) {
-    if (addr < RAM_SIZE) {
-      return _RAM[addr];
-    }
-
-    if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
-      return _VRAM[addr - VRAM_PART1_OFFSET];
-    }
-
-    if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
-      return _VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE];
-    }
-
-    if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      switch (addr - IORAM_OFFSET) {
-        case 0x00: {
-          const ret = _IT;
-          _IT = 0;
-          return ret;
-        }
-        case 0x01: {
-          const ret = _ISW;
-          _ISW = 0;
-          return ret;
-        }
-        case 0x02: {
-          const ret = _IPT;
-          _IPT = 0;
-          return ret;
-        }
-        case 0x03: {
-          const ret = _ISIO;
-          _ISIO = 0;
-          return ret;
-        }
-        case 0x04: {
-          const ret = _IK0;
-          _IK0 = 0;
-          return ret;
-        }
-        case 0x05: {
-          const ret = _IK1;
-          _IK1 = 0;
-          return ret;
-        }
-        case 0x10:
-          return _EIT;
-        case 0x11:
-          return _EISW;
-        case 0x12:
-          return _EIPT;
-        case 0x13:
-          return _EISIO;
-        case 0x14:
-          return _EIK0;
-        case 0x15:
-          return _EIK1;
-        case 0x20:
-          return _TM & 0xf;
-        case 0x21:
-          return (_TM >> 4) & 0xf;
-        case 0x22:
-          return _SWL & 0xf;
-        case 0x23:
-          return _SWH & 0xf;
-        case 0x24:
-          return _PT & 0xf;
-        case 0x25:
-          return (_PT >> 4) & 0xf;
-        case 0x26:
-          return _PRD & 0xf; // TODO: _PRD does not exist?
-        case 0x27:
-          return (_RD >> 4) & 0xf;
-        case 0x30:
-          return _SD & 0xf;
-        case 0x31:
-          return (_SD >> 4) & 0xf;
-        case 0x40:
-          return _K0;
-        case 0x41:
-          return _DFK0;
-        case 0x42:
-          return _K1;
-        case 0x50:
-          return _R0;
-        case 0x51:
-          return _R1;
-        case 0x52:
-          return _R2;
-        case 0x53:
-          return _R3;
-        case 0x54:
-          return _R4;
-        case 0x60:
-          return _P0;
-        case 0x61:
-          return _P1;
-        case 0x62:
-          return _P2;
-        case 0x63:
-          return _P3;
-        case 0x70:
-          return _CTRL_OSC;
-        case 0x71:
-          return _CTRL_LCD;
-        case 0x72:
-          return _LC;
-        case 0x73:
-          return 0;
-        case 0x74:
-          return _CTRL_BZ1;
-        case 0x75: {
-          const isOneShotRinging = _sound.is_one_shot_ringing() ? 1 : 0;
-          return (
-            (_CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) | (IO_BZSHOT * isOneShotRinging)
-          );
-        }
-        case 0x77:
-          return _CTRL_SW & IO_SWRUN;
-        case 0x78:
-          return _CTRL_PT & IO_PTRUN;
-        case 0x79:
-          return _PTC;
-        case 0x7d:
-          return _IOC;
-        case 0x7e:
-          return _PUP;
-        default:
-          return 0;
-      }
-    }
-
-    return 0;
+    return get_mem(addr);
   }
 
   set_mem(addr, value) {
-    if (addr < RAM_SIZE) {
-      _RAM[addr] = value & 0xf;
-    } else if (addr >= VRAM_PART1_OFFSET && addr < VRAM_PART1_END) {
-      _VRAM[addr - VRAM_PART1_OFFSET] = value & 0xf;
-    } else if (addr >= VRAM_PART2_OFFSET && addr < VRAM_PART2_END) {
-      _VRAM[addr - VRAM_PART2_OFFSET + VRAM_PART_SIZE] = value & 0xf;
-    } else if (addr >= IORAM_OFFSET && addr < IORAM_END) {
-      switch (addr - IORAM_OFFSET) {
-        case 0x10:
-          _EIT = value;
-          break;
-        case 0x11:
-          _EISW = value & 0x3;
-          break;
-        case 0x12:
-          _EIPT = value & 0x1;
-          break;
-        case 0x13:
-          _EISIO = value & 0x1;
-          break;
-        case 0x14:
-          _EIK0 = value;
-          break;
-        case 0x15:
-          _EIK1 = value;
-          break;
-        case 0x26:
-          _RD = (_RD & 0xf0) | (value & 0x0f);
-          break;
-        case 0x27:
-          _RD = (_RD & 0x0f) | ((value << 4) & 0xf0);
-          break;
-        case 0x30:
-          _SD = (_SD & 0xf0) | (value & 0x0f);
-          break;
-        case 0x31:
-          _SD = (_SD & 0x0f) | ((value << 4) & 0xf0);
-          break;
-        case 0x50:
-          _R0 = value;
-          break;
-        case 0x51:
-          _R1 = value;
-          break;
-        case 0x52:
-          _R2 = value;
-          break;
-        case 0x53:
-          _R3 = value;
-          break;
-        case 0x54: {
-          _R4 = value;
-          if (value & IO_R43) {
-            _sound.set_buzzer_off();
-          } else {
-            _sound.set_buzzer_on();
-          }
-          break;
-        }
-        case 0x60: {
-          _P0_OUTPUT_DATA = value;
-          if (_IOC & IO_IOC0) {
-            _P0 = value;
-          }
-          break;
-        }
-        case 0x61: {
-          _P1_OUTPUT_DATA = value;
-          if (_IOC & IO_IOC1) {
-            _P1 = value;
-          }
-          break;
-        }
-        case 0x62: {
-          _P2_OUTPUT_DATA = value;
-          if (_IOC & IO_IOC2) {
-            _P2 = value;
-          }
-          break;
-        }
-        case 0x63: {
-          _P3_OUTPUT_DATA = value;
-          if (_IOC & IO_IOC3 || _p3_dedicated) {
-            _P3 = value;
-          }
-          break;
-        }
-        case 0x70:
-          _CTRL_OSC = value;
-          break;
-        case 0x71:
-          _CTRL_LCD = value;
-          break;
-        case 0x72:
-          _LC = value;
-          break;
-        case 0x74: {
-          _CTRL_BZ1 = value;
-          _sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
-          break;
-        }
-        case 0x75: {
-          _CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
-          const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
-          _sound.set_envelope_cycle(cycle);
-          if (value & IO_BZSHOT) {
-            const duration = (_CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
-            _sound.one_shot(duration);
-          }
-          if (value & IO_ENVON) {
-            _sound.set_envelope_on();
-          } else {
-            _sound.set_envelope_off();
-          }
-          if (value & IO_ENVRST) {
-            _sound.reset_envelope();
-          }
-          break;
-        }
-        case 0x76: {
-          if (value & IO_TMRST) {
-            _TM = 0;
-          }
-          break;
-        }
-        case 0x77: {
-          if (value & IO_SWRST) {
-            _SWL = _SWH = 0;
-          }
-          _CTRL_SW = value & IO_SWRUN;
-          break;
-        }
-        case 0x78: {
-          if (value & IO_PTRST) {
-            _PT = _RD;
-          }
-          _CTRL_PT = value & IO_PTRUN;
-          break;
-        }
-        case 0x79:
-          _PTC = value;
-          break;
-        case 0x7d: {
-          _IOC = value;
-          if (_IOC & IO_IOC0) {
-            _P0 = _P0_OUTPUT_DATA;
-          }
-          if (_IOC & IO_IOC1) {
-            _P1 = _P1_OUTPUT_DATA;
-          }
-          if (_IOC & IO_IOC2) {
-            _P2 = _P2_OUTPUT_DATA;
-          }
-          if (_IOC & IO_IOC3) {
-            _P3 = _P3_OUTPUT_DATA;
-          }
-          break;
-        }
-        case 0x7e:
-          _PUP = value;
-          break;
-      }
-    }
+    set_mem(addr, value);
   }
 
   get_A() {
@@ -2845,19 +2847,19 @@ export class CPU {
   }
 
   get_MX() {
-    return this.get_mem(_IX);
+    return get_mem(_IX);
   }
 
   set_MX(value) {
-    this.set_mem(_IX, value);
+    set_mem(_IX, value);
   }
 
   get_MY() {
-    return this.get_mem(_IY);
+    return get_mem(_IY);
   }
 
   set_MY(value) {
-    this.set_mem(_IY, value);
+    set_mem(_IY, value);
   }
 
   get_NPC() {
