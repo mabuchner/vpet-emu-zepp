@@ -523,6 +523,12 @@ export class CPU {
     return this._instr_counter;
   }
 
+  clockBatch(n) {
+    for (let i = 0; i < n; i += 1) {
+      this.clock();
+    }
+  }
+
   clock() {
     let exec_cycles = 7;
 
