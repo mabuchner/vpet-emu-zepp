@@ -1,6 +1,7 @@
-import { Sound } from "./sound";
-
 const OSC1_CLOCK = 32768;
+const SND_BUZZER_FREQ_DIV = [8, 10, 12, 14, 16, 20, 24, 28];
+const SND_ONE_SHOT_DIV = [8 * 128, 16 * 128];
+const SND_ENVELOPE_CYCLE_DIV = [16 * 128, 32 * 128];
 const TIMER_CLOCK_DIV = OSC1_CLOCK / 256;
 const STOPWATCH_CLOCK_DIV = OSC1_CLOCK / 100;
 const PTIMER_CLOCK_DIV = new Uint8Array([
@@ -225,7 +226,16 @@ let _instr_counter = 0;
 let _ROM_data = null;
 let _RAM = null;
 let _ROM = null;
-let _sound = null;
+let _tone_generator = null;
+let _snd_cycle = 0;
+let _snd_one_shot = 0;
+let _snd_envelope = 0;
+let _snd_envelope_step = 0;
+let _snd_envelope_cycle = 0;
+let _snd_buzzer_freq = 0;
+let _snd_on = false;
+let _snd_envelope_on = false;
+let _snd_active = false;
 let _port_pullup = null;
 let _p3_dedicated = 0;
 let _OSC1_clock_div = 0;
@@ -353,7 +363,29 @@ function _initRegisters() {
 }
 
 function _clock_OSC1() {
-  _sound.clock();
+  _snd_cycle += 1;
+  if (_snd_active) {
+    if (_snd_one_shot > 0) {
+      _snd_one_shot -= 1;
+      if (_snd_one_shot <= 0) {
+        _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+      }
+    }
+    if (_snd_envelope > 0) {
+      _snd_envelope -= 1;
+      if (_snd_envelope <= 0) {
+        _snd_envelope_step -= 1;
+        _tone_generator.play(
+          _snd_buzzer_freq,
+          false,
+          1 / (8 - _snd_envelope_step),
+          _snd_cycle / OSC1_CLOCK,
+        );
+        _snd_envelope = _snd_envelope_cycle;
+      }
+    }
+    _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
+  }
 
   if ((_PTC & IO_PTC) > 1) {
     _ptimer_counter -= 1;
@@ -540,7 +572,7 @@ function get_mem(addr) {
       case 0x74:
         return _CTRL_BZ1;
       case 0x75: {
-        const isOneShotRinging = _sound.is_one_shot_ringing() ? 1 : 0;
+        const isOneShotRinging = _snd_one_shot > 0 ? 1 : 0;
         return (
           (_CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) | (IO_BZSHOT * isOneShotRinging)
         );
@@ -617,9 +649,9 @@ function set_mem(addr, value) {
       case 0x54: {
         _R4 = value;
         if (value & IO_R43) {
-          _sound.set_buzzer_off();
+          _snd_set_buzzer_off();
         } else {
-          _sound.set_buzzer_on();
+          _snd_set_buzzer_on();
         }
         break;
       }
@@ -662,24 +694,24 @@ function set_mem(addr, value) {
         break;
       case 0x74: {
         _CTRL_BZ1 = value;
-        _sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
+        _snd_set_freq(_CTRL_BZ1 & IO_BZFQ);
         break;
       }
       case 0x75: {
         _CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
         const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
-        _sound.set_envelope_cycle(cycle);
+        _snd_set_envelope_cycle(cycle);
         if (value & IO_BZSHOT) {
           const duration = (_CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
-          _sound.one_shot(duration);
+          _snd_one_shot_start(duration);
         }
         if (value & IO_ENVON) {
-          _sound.set_envelope_on();
+          _snd_set_envelope_on();
         } else {
-          _sound.set_envelope_off();
+          _snd_set_envelope_off();
         }
         if (value & IO_ENVRST) {
-          _sound.reset_envelope();
+          _snd_reset_envelope();
         }
         break;
       }
@@ -729,12 +761,75 @@ function set_mem(addr, value) {
   }
 }
 
+function _snd_set_freq(value) {
+  _snd_buzzer_freq = OSC1_CLOCK / SND_BUZZER_FREQ_DIV[value];
+  if (_snd_on) {
+    _tone_generator.play(_snd_buzzer_freq, false, 0.5, _snd_cycle / OSC1_CLOCK);
+  }
+}
+
+function _snd_set_buzzer_on() {
+  _snd_on = true;
+  _snd_one_shot = 0;
+  _tone_generator.play(_snd_buzzer_freq, false, 0.5, _snd_cycle / OSC1_CLOCK);
+  if (_snd_envelope_on) {
+    _snd_envelope = _snd_envelope_cycle;
+    _snd_active = true;
+  }
+}
+
+function _snd_set_buzzer_off() {
+  _snd_on = false;
+  _snd_envelope = 0;
+  _snd_one_shot = 0;
+  _snd_active = false;
+  _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+}
+
+function _snd_one_shot_start(duration) {
+  if (_snd_one_shot === 0) {
+    _snd_one_shot = SND_ONE_SHOT_DIV[duration];
+    _snd_active = true;
+    if (!_snd_on) {
+      _tone_generator.play(
+        _snd_buzzer_freq,
+        false,
+        0.5,
+        _snd_cycle / OSC1_CLOCK,
+      );
+    }
+  }
+}
+
+function _snd_set_envelope_on() {
+  _snd_envelope_on = true;
+  _snd_envelope_step = 7;
+}
+
+function _snd_set_envelope_off() {
+  _snd_envelope_on = false;
+  _snd_envelope_step = 0;
+  _snd_envelope = 0;
+  _snd_active = _snd_one_shot > 0;
+  _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+}
+
+function _snd_set_envelope_cycle(cycle) {
+  _snd_envelope_cycle = SND_ENVELOPE_CYCLE_DIV[cycle];
+}
+
+function _snd_reset_envelope() {
+  _snd_envelope_step = 7;
+}
+
 // E0C6200
 export class CPU {
   constructor(rom, clock, toneGenerator) {
     _ROM = rom;
     _ROM_data = rom._data;
-    _sound = new Sound(OSC1_CLOCK, toneGenerator);
+    _tone_generator = toneGenerator;
+    _snd_buzzer_freq = OSC1_CLOCK / SND_BUZZER_FREQ_DIV[0];
+    _snd_envelope_cycle = SND_ENVELOPE_CYCLE_DIV[0];
 
     _port_pullup = mask.port_pullup;
 
@@ -835,8 +930,8 @@ export class CPU {
     _timer_counter = 0;
     _stopwatch_counter = 0;
 
-    _sound.set_buzzer_off();
-    _sound.set_envelope_off();
+    _snd_set_buzzer_off();
+    _snd_set_envelope_off();
   }
 
   pin_set(port, pin, level) {
@@ -3143,7 +3238,29 @@ export class CPU {
     if (!(_CTRL_OSC & IO_CLKCHG)) {
       // Normal mode: exec_cycles == number of OSC1 ticks elapsed.
       // Batch all counter updates instead of calling _clock_OSC1() exec_cycles times.
-      _sound.batch(exec_cycles);
+      _snd_cycle += exec_cycles;
+      if (_snd_active) {
+        if (_snd_one_shot > 0) {
+          _snd_one_shot -= exec_cycles;
+          if (_snd_one_shot <= 0) {
+            _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+          }
+        }
+        if (_snd_envelope > 0) {
+          _snd_envelope -= exec_cycles;
+          if (_snd_envelope <= 0) {
+            _snd_envelope_step -= 1;
+            _tone_generator.play(
+              _snd_buzzer_freq,
+              false,
+              1 / (8 - _snd_envelope_step),
+              _snd_cycle / OSC1_CLOCK,
+            );
+            _snd_envelope = _snd_envelope_cycle;
+          }
+        }
+        _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
+      }
 
       if ((_PTC & IO_PTC) > 1) {
         _ptimer_counter -= exec_cycles;

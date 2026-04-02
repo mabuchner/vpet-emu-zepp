@@ -12,115 +12,11 @@
     }
   };
 
-  // utils/sound.js
-  var BUZZER_FREQ_DIV = [8, 10, 12, 14, 16, 20, 24, 28];
-  var SOUND_CLOCK_DIV = 128;
-  var ONE_SHOT_PULSE_WIDTH_DIV = [8 * SOUND_CLOCK_DIV, 16 * SOUND_CLOCK_DIV];
-  var ENVELOPE_CYCLE_DIV = [16 * SOUND_CLOCK_DIV, 32 * SOUND_CLOCK_DIV];
-  var Sound = class {
-    constructor(clock, toneGenerator) {
-      this._system_clock = clock;
-      this._one_shot_counter = 0;
-      this._buzzer_freq = clock / BUZZER_FREQ_DIV[0];
-      this._envelope_step = 0;
-      this._envelope_cycle = ENVELOPE_CYCLE_DIV[0];
-      this._envelope_counter = 0;
-      this._envelope_on = false;
-      this._sound_on = false;
-      this._cycle_counter = 0;
-      this._tone_generator = toneGenerator;
-    }
-    clock() {
-      this.batch(1);
-    }
-    batch(n) {
-      this._cycle_counter += n;
-      if (this._one_shot_counter > 0) {
-        this._one_shot_counter -= n;
-        if (this._one_shot_counter <= 0) {
-          this._tone_generator.stop(this._cycle_counter / this._system_clock);
-        }
-      }
-      if (this._envelope_counter > 0) {
-        this._envelope_counter -= n;
-        if (this._envelope_counter <= 0) {
-          this._envelope_step -= 1;
-          this._tone_generator.play(
-            this._buzzer_freq,
-            false,
-            1 / (8 - this._envelope_step),
-            this._cycle_counter / this._system_clock
-          );
-          this._envelope_counter = this._envelope_cycle;
-        }
-      }
-    }
-    set_freq(value) {
-      this._buzzer_freq = this._system_clock / BUZZER_FREQ_DIV[value];
-      if (this._sound_on) {
-        this._tone_generator.play(
-          this._buzzer_freq,
-          false,
-          0.5,
-          this._cycle_counter / this._system_clock
-        );
-      }
-    }
-    set_envelope_on() {
-      this._envelope_on = true;
-      this._envelope_step = 7;
-    }
-    set_envelope_off() {
-      this._envelope_on = false;
-      this._envelope_step = 0;
-      this._envelope_counter = 0;
-      this._tone_generator.stop(this._cycle_counter / this._system_clock);
-    }
-    set_envelope_cycle(cycle) {
-      this._envelope_cycle = ENVELOPE_CYCLE_DIV[cycle];
-    }
-    reset_envelope() {
-      this._envelope_step = 7;
-    }
-    one_shot(duration) {
-      if (this._one_shot_counter == 0) {
-        this._one_shot_counter = ONE_SHOT_PULSE_WIDTH_DIV[duration];
-        if (!this._sound_on) {
-          this._tone_generator.play(
-            this._buzzer_freq,
-            false,
-            0.5,
-            this._cycle_counter / this._system_clock
-          );
-        }
-      }
-    }
-    set_buzzer_on() {
-      this._sound_on = true;
-      this._one_shot_counter = 0;
-      this._tone_generator.play(
-        this._buzzer_freq,
-        false,
-        0.5,
-        this._cycle_counter / this._system_clock
-      );
-      if (this._envelope_on) {
-        this._envelope_counter = this._envelope_cycle;
-      }
-    }
-    set_buzzer_off() {
-      this._sound_on = false;
-      this._envelope_counter = 0;
-      this._one_shot_counter = 0;
-      this._tone_generator.stop(this._cycle_counter / this._system_clock);
-    }
-    is_one_shot_ringing() {
-      return this._one_shot_counter > 0;
-    }
-  };
-
   // utils/cpu.js
   var OSC1_CLOCK = 32768;
+  var SND_BUZZER_FREQ_DIV = [8, 10, 12, 14, 16, 20, 24, 28];
+  var SND_ONE_SHOT_DIV = [8 * 128, 16 * 128];
+  var SND_ENVELOPE_CYCLE_DIV = [16 * 128, 32 * 128];
   var TIMER_CLOCK_DIV = OSC1_CLOCK / 256;
   var STOPWATCH_CLOCK_DIV = OSC1_CLOCK / 100;
   var PTIMER_CLOCK_DIV = new Uint8Array([
@@ -211,7 +107,16 @@
   var _ROM_data = null;
   var _RAM = null;
   var _ROM = null;
-  var _sound = null;
+  var _tone_generator = null;
+  var _snd_cycle = 0;
+  var _snd_one_shot = 0;
+  var _snd_envelope = 0;
+  var _snd_envelope_step = 0;
+  var _snd_envelope_cycle = 0;
+  var _snd_buzzer_freq = 0;
+  var _snd_on = false;
+  var _snd_envelope_on = false;
+  var _snd_active = false;
   var _port_pullup = null;
   var _p3_dedicated = 0;
   var _OSC1_clock_div = 0;
@@ -328,7 +233,29 @@
     _PUP = 0;
   }
   function _clock_OSC1() {
-    _sound.clock();
+    _snd_cycle += 1;
+    if (_snd_active) {
+      if (_snd_one_shot > 0) {
+        _snd_one_shot -= 1;
+        if (_snd_one_shot <= 0) {
+          _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+        }
+      }
+      if (_snd_envelope > 0) {
+        _snd_envelope -= 1;
+        if (_snd_envelope <= 0) {
+          _snd_envelope_step -= 1;
+          _tone_generator.play(
+            _snd_buzzer_freq,
+            false,
+            1 / (8 - _snd_envelope_step),
+            _snd_cycle / OSC1_CLOCK
+          );
+          _snd_envelope = _snd_envelope_cycle;
+        }
+      }
+      _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
+    }
     if ((_PTC & IO_PTC) > 1) {
       _ptimer_counter -= 1;
       if (_ptimer_counter <= 0) {
@@ -505,7 +432,7 @@
         case 116:
           return _CTRL_BZ1;
         case 117: {
-          const isOneShotRinging = _sound.is_one_shot_ringing() ? 1 : 0;
+          const isOneShotRinging = _snd_one_shot > 0 ? 1 : 0;
           return _CTRL_BZ2 & (IO_ENVRT | IO_ENVON) | IO_BZSHOT * isOneShotRinging;
         }
         case 119:
@@ -578,9 +505,9 @@
         case 84: {
           _R4 = value;
           if (value & IO_R43) {
-            _sound.set_buzzer_off();
+            _snd_set_buzzer_off();
           } else {
-            _sound.set_buzzer_on();
+            _snd_set_buzzer_on();
           }
           break;
         }
@@ -623,24 +550,24 @@
           break;
         case 116: {
           _CTRL_BZ1 = value;
-          _sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
+          _snd_set_freq(_CTRL_BZ1 & IO_BZFQ);
           break;
         }
         case 117: {
           _CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
           const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
-          _sound.set_envelope_cycle(cycle);
+          _snd_set_envelope_cycle(cycle);
           if (value & IO_BZSHOT) {
             const duration = (_CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
-            _sound.one_shot(duration);
+            _snd_one_shot_start(duration);
           }
           if (value & IO_ENVON) {
-            _sound.set_envelope_on();
+            _snd_set_envelope_on();
           } else {
-            _sound.set_envelope_off();
+            _snd_set_envelope_off();
           }
           if (value & IO_ENVRST) {
-            _sound.reset_envelope();
+            _snd_reset_envelope();
           }
           break;
         }
@@ -689,11 +616,66 @@
       }
     }
   }
+  function _snd_set_freq(value) {
+    _snd_buzzer_freq = OSC1_CLOCK / SND_BUZZER_FREQ_DIV[value];
+    if (_snd_on) {
+      _tone_generator.play(_snd_buzzer_freq, false, 0.5, _snd_cycle / OSC1_CLOCK);
+    }
+  }
+  function _snd_set_buzzer_on() {
+    _snd_on = true;
+    _snd_one_shot = 0;
+    _tone_generator.play(_snd_buzzer_freq, false, 0.5, _snd_cycle / OSC1_CLOCK);
+    if (_snd_envelope_on) {
+      _snd_envelope = _snd_envelope_cycle;
+      _snd_active = true;
+    }
+  }
+  function _snd_set_buzzer_off() {
+    _snd_on = false;
+    _snd_envelope = 0;
+    _snd_one_shot = 0;
+    _snd_active = false;
+    _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+  }
+  function _snd_one_shot_start(duration) {
+    if (_snd_one_shot === 0) {
+      _snd_one_shot = SND_ONE_SHOT_DIV[duration];
+      _snd_active = true;
+      if (!_snd_on) {
+        _tone_generator.play(
+          _snd_buzzer_freq,
+          false,
+          0.5,
+          _snd_cycle / OSC1_CLOCK
+        );
+      }
+    }
+  }
+  function _snd_set_envelope_on() {
+    _snd_envelope_on = true;
+    _snd_envelope_step = 7;
+  }
+  function _snd_set_envelope_off() {
+    _snd_envelope_on = false;
+    _snd_envelope_step = 0;
+    _snd_envelope = 0;
+    _snd_active = _snd_one_shot > 0;
+    _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+  }
+  function _snd_set_envelope_cycle(cycle) {
+    _snd_envelope_cycle = SND_ENVELOPE_CYCLE_DIV[cycle];
+  }
+  function _snd_reset_envelope() {
+    _snd_envelope_step = 7;
+  }
   var CPU = class {
     constructor(rom, clock, toneGenerator) {
       _ROM = rom;
       _ROM_data = rom._data;
-      _sound = new Sound(OSC1_CLOCK, toneGenerator);
+      _tone_generator = toneGenerator;
+      _snd_buzzer_freq = OSC1_CLOCK / SND_BUZZER_FREQ_DIV[0];
+      _snd_envelope_cycle = SND_ENVELOPE_CYCLE_DIV[0];
       _port_pullup = mask.port_pullup;
       _p3_dedicated = mask.p3_dedicated;
       _initRegisters();
@@ -783,8 +765,8 @@
       _OSC1_counter = 0;
       _timer_counter = 0;
       _stopwatch_counter = 0;
-      _sound.set_buzzer_off();
-      _sound.set_envelope_off();
+      _snd_set_buzzer_off();
+      _snd_set_envelope_off();
     }
     pin_set(port, pin, level) {
       if (port === "K0") {
@@ -2148,7 +2130,29 @@
         }
       }
       if (!(_CTRL_OSC & IO_CLKCHG)) {
-        _sound.batch(exec_cycles);
+        _snd_cycle += exec_cycles;
+        if (_snd_active) {
+          if (_snd_one_shot > 0) {
+            _snd_one_shot -= exec_cycles;
+            if (_snd_one_shot <= 0) {
+              _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+            }
+          }
+          if (_snd_envelope > 0) {
+            _snd_envelope -= exec_cycles;
+            if (_snd_envelope <= 0) {
+              _snd_envelope_step -= 1;
+              _tone_generator.play(
+                _snd_buzzer_freq,
+                false,
+                1 / (8 - _snd_envelope_step),
+                _snd_cycle / OSC1_CLOCK
+              );
+              _snd_envelope = _snd_envelope_cycle;
+            }
+          }
+          _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
+        }
         if ((_PTC & IO_PTC) > 1) {
           _ptimer_counter -= exec_cycles;
           if (_ptimer_counter <= 0) {
