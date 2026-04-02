@@ -3141,13 +3141,39 @@ export class CPU {
     }
 
     if (!(_CTRL_OSC & IO_CLKCHG)) {
-      exec_cycles *= _OSC1_clock_div;
-    }
+      // Normal mode: exec_cycles == number of OSC1 ticks elapsed.
+      // Batch all counter updates instead of calling _clock_OSC1() exec_cycles times.
+      _sound.batch(exec_cycles);
 
-    _OSC1_counter -= exec_cycles;
-    while (_OSC1_counter <= 0) {
-      _OSC1_counter += _OSC1_clock_div;
-      _clock_OSC1();
+      if ((_PTC & IO_PTC) > 1) {
+        _ptimer_counter -= exec_cycles;
+        if (_ptimer_counter <= 0) {
+          _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
+          _process_ptimer();
+        }
+      }
+
+      _stopwatch_counter -= exec_cycles;
+      if (_stopwatch_counter <= 0) {
+        _stopwatch_counter += STOPWATCH_CLOCK_DIV;
+        _process_stopwatch();
+      }
+
+      _timer_counter -= exec_cycles;
+      if (_timer_counter <= 0) {
+        _timer_counter += TIMER_CLOCK_DIV;
+        _process_timer();
+      }
+
+      exec_cycles *= _OSC1_clock_div;
+    } else {
+      // IO_CLKCHG mode: CPU runs on high-frequency oscillator; OSC1 advances
+      // fractionally per CPU cycle, so use the original counter-based approach.
+      _OSC1_counter -= exec_cycles;
+      while (_OSC1_counter <= 0) {
+        _OSC1_counter += _OSC1_clock_div;
+        _clock_OSC1();
+      }
     }
 
     return exec_cycles;

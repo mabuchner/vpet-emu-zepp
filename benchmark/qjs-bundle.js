@@ -31,15 +31,18 @@
       this._tone_generator = toneGenerator;
     }
     clock() {
-      this._cycle_counter += 1;
+      this.batch(1);
+    }
+    batch(n) {
+      this._cycle_counter += n;
       if (this._one_shot_counter > 0) {
-        this._one_shot_counter -= 1;
+        this._one_shot_counter -= n;
         if (this._one_shot_counter <= 0) {
           this._tone_generator.stop(this._cycle_counter / this._system_clock);
         }
       }
       if (this._envelope_counter > 0) {
-        this._envelope_counter -= 1;
+        this._envelope_counter -= n;
         if (this._envelope_counter <= 0) {
           this._envelope_step -= 1;
           this._tone_generator.play(
@@ -2145,12 +2148,31 @@
         }
       }
       if (!(_CTRL_OSC & IO_CLKCHG)) {
+        _sound.batch(exec_cycles);
+        if ((_PTC & IO_PTC) > 1) {
+          _ptimer_counter -= exec_cycles;
+          if (_ptimer_counter <= 0) {
+            _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
+            _process_ptimer();
+          }
+        }
+        _stopwatch_counter -= exec_cycles;
+        if (_stopwatch_counter <= 0) {
+          _stopwatch_counter += STOPWATCH_CLOCK_DIV;
+          _process_stopwatch();
+        }
+        _timer_counter -= exec_cycles;
+        if (_timer_counter <= 0) {
+          _timer_counter += TIMER_CLOCK_DIV;
+          _process_timer();
+        }
         exec_cycles *= _OSC1_clock_div;
-      }
-      _OSC1_counter -= exec_cycles;
-      while (_OSC1_counter <= 0) {
-        _OSC1_counter += _OSC1_clock_div;
-        _clock_OSC1();
+      } else {
+        _OSC1_counter -= exec_cycles;
+        while (_OSC1_counter <= 0) {
+          _OSC1_counter += _OSC1_clock_div;
+          _clock_OSC1();
+        }
       }
       return exec_cycles;
     }
