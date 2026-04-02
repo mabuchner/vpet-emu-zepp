@@ -418,10 +418,10 @@ function _process_timer() {
 }
 
 function _interrupt(vector) {
-  set_mem((_SP - 1) & 0xff, (_PC >> 8) & 0x0f);
-  set_mem((_SP - 2) & 0xff, (_PC >> 4) & 0x0f);
+  _RAM[(_SP - 1) & 0xff] = (_PC >> 8) & 0x0f & 0xf;
+  _RAM[(_SP - 2) & 0xff] = (_PC >> 4) & 0x0f & 0xf;
   _SP = (_SP - 3) & 0xff;
-  set_mem(_SP, _PC & 0x0f);
+  _RAM[_SP] = _PC & 0x0f & 0xf;
   _IF = 0;
   _HALT = 0;
   _PC = _NPC = (_NPC & 0x1000) | 0x0100 | vector;
@@ -1001,7 +1001,9 @@ export class CPU {
             (_RAM[_SP + 1] << 4) |
             _RAM[_SP];
           _SP = (_SP + 3) & 0xff;
-          set_mem(_IX, opcode & 0x00f);
+          _IX < RAM_SIZE
+            ? (_RAM[_IX] = opcode & 0x00f & 0xf)
+            : set_mem(_IX, opcode & 0x00f);
           set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0x00f);
           _IX = (_IX & 0xf00) | ((_IX + 2) & 0xff);
           exec_cycles = 12;
@@ -1032,10 +1034,10 @@ export class CPU {
         case 0x4: {
           // call_s
           // M(SP-1)←PCP, M(SP-2)←PCSH, M(SP-3)←PCSL+1 SP←SP-3, PCP←NPP, PCS←s7~s0
-          set_mem((_SP - 1) & 0xff, ((_PC + 1) >> 8) & 0x0f);
-          set_mem((_SP - 2) & 0xff, ((_PC + 1) >> 4) & 0x0f);
+          _RAM[(_SP - 1) & 0xff] = ((_PC + 1) >> 8) & 0x0f & 0xf;
+          _RAM[(_SP - 2) & 0xff] = ((_PC + 1) >> 4) & 0x0f & 0xf;
           _SP = (_SP - 3) & 0xff;
-          set_mem(_SP, (_PC + 1) & 0x0f);
+          _RAM[_SP] = (_PC + 1) & 0x0f & 0xf;
           _PC = (_NPC & 0x1f00) | (opcode & 0x0ff);
           exec_cycles = 7;
           break;
@@ -1043,10 +1045,10 @@ export class CPU {
         case 0x5: {
           // calz_s
           // M(SP-1)←PCP, M(SP-2)←PCSH, M(SP-3)←PCSL+1 SP←SP-3, PCP←0, PCS←s7~s0
-          set_mem((_SP - 1) & 0xff, ((_PC + 1) >> 8) & 0x0f);
-          set_mem((_SP - 2) & 0xff, ((_PC + 1) >> 4) & 0x0f);
+          _RAM[(_SP - 1) & 0xff] = ((_PC + 1) >> 8) & 0x0f & 0xf;
+          _RAM[(_SP - 2) & 0xff] = ((_PC + 1) >> 4) & 0x0f & 0xf;
           _SP = (_SP - 3) & 0xff;
-          set_mem(_SP, (_PC + 1) & 0x0f);
+          _RAM[_SP] = (_PC + 1) & 0x0f & 0xf;
           _PC = _NPC = (_NPC & 0x1000) | (opcode & 0x0ff);
           exec_cycles = 7;
           break;
@@ -1084,7 +1086,9 @@ export class CPU {
         case 0x9: {
           // lbpx_mx_l
           // M(X)←l3~l0, M(X+1)←l7~l4, X←X+2
-          set_mem(_IX, opcode & 0x00f);
+          _IX < RAM_SIZE
+            ? (_RAM[_IX] = opcode & 0x00f & 0xf)
+            : set_mem(_IX, opcode & 0x00f);
           set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0x00f);
           _IX = (_IX & 0xf00) | ((_IX + 2) & 0xff);
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1188,15 +1192,23 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) +
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) +
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY));
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY));
               _CF = res > 15 ? 1 : 0;
               if (_DF && res > 9) {
                 res += 6;
@@ -1208,9 +1220,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1227,15 +1243,23 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) +
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) +
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) +
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) +
                 _CF;
               _CF = res > 15 ? 1 : 0;
               if (_DF && res > 9) {
@@ -1248,9 +1272,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1267,15 +1295,23 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) -
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) -
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY));
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY));
               _CF = res < 0 ? 1 : 0;
               if (_DF && res < 0) {
                 res += 10;
@@ -1286,9 +1322,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1305,15 +1345,23 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) -
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) -
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) -
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) -
                 _CF;
               _CF = res < 0 ? 1 : 0;
               if (_DF && res < 0) {
@@ -1325,9 +1373,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1344,24 +1396,32 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) &
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) &
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY));
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY));
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
                 _A = res & 0xf;
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res);
+                _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res);
               } else {
-                set_mem(_IY, res);
+                _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1378,24 +1438,32 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) |
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) |
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY));
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY));
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
                 _A = res & 0xf;
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res);
+                _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res);
               } else {
-                set_mem(_IY, res);
+                _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1412,24 +1480,32 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) ^
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) ^
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY));
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY));
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
                 _A = res & 0xf;
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res);
+                _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res);
               } else {
-                set_mem(_IY, res);
+                _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1445,8 +1521,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) <<
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) <<
                   1) +
                 _CF;
               _CF = res > 15 ? 1 : 0;
@@ -1455,9 +1535,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1486,8 +1570,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) +
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) +
                 (opcode & 0x00f);
               _CF = res > 15 ? 1 : 0;
               if (_DF && res > 9) {
@@ -1500,9 +1588,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1518,8 +1610,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) +
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) +
                 (opcode & 0x00f) +
                 _CF;
               _CF = res > 15 ? 1 : 0;
@@ -1533,9 +1629,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1551,8 +1651,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) &
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) &
                 opcode &
                 0x00f;
               _ZF = res === 0 ? 1 : 0;
@@ -1561,9 +1665,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res);
+                _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res);
               } else {
-                set_mem(_IY, res);
+                _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1579,8 +1683,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) |
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) |
                 (opcode & 0x00f);
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
@@ -1588,9 +1696,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res);
+                _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res);
               } else {
-                set_mem(_IY, res);
+                _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1611,8 +1719,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) ^
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) ^
                 (opcode & 0x00f);
               _ZF = res === 0 ? 1 : 0;
               if (r === 0) {
@@ -1620,9 +1732,9 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res);
+                _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res);
               } else {
-                set_mem(_IY, res);
+                _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1638,8 +1750,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) -
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) -
                 (opcode & 0x00f) -
                 _CF;
               _CF = res < 0 ? 1 : 0;
@@ -1652,9 +1768,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = res & 0xf & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, res & 0xf);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = res & 0xf & 0xf)
+                  : set_mem(_IX, res & 0xf);
               } else {
-                set_mem(_IY, res & 0xf);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = res & 0xf & 0xf)
+                  : set_mem(_IY, res & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -1670,8 +1790,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) &
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) &
                   opcode &
                   0x00f) ===
                 0
@@ -1691,8 +1815,12 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) -
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) -
                 (opcode & 0x00f);
               _ZF = cp === 0 ? 1 : 0;
               _CF = cp < 0 ? 1 : 0;
@@ -1714,9 +1842,13 @@ export class CPU {
               } else if (r === 1) {
                 _B = opcode & 0x00f & 0xf;
               } else if (r === 2) {
-                set_mem(_IX, opcode & 0x00f);
+                _IX < RAM_SIZE
+                  ? (_RAM[_IX] = opcode & 0x00f & 0xf)
+                  : set_mem(_IX, opcode & 0x00f);
               } else {
-                set_mem(_IY, opcode & 0x00f);
+                _IY < RAM_SIZE
+                  ? (_RAM[_IY] = opcode & 0x00f & 0xf)
+                  : set_mem(_IY, opcode & 0x00f);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
@@ -1737,7 +1869,9 @@ export class CPU {
                 case 0x2: {
                   // ldpx_mx_i
                   // M(X)←i3~i0, X←X+1
-                  set_mem(_IX, opcode & 0x00f);
+                  _IX < RAM_SIZE
+                    ? (_RAM[_IX] = opcode & 0x00f & 0xf)
+                    : set_mem(_IX, opcode & 0x00f);
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1746,7 +1880,9 @@ export class CPU {
                 case 0x3: {
                   // ldpy_my_i
                   // M(Y)←i3~i0, Y←Y+1
-                  set_mem(_IY, opcode & 0x00f);
+                  _IY < RAM_SIZE
+                    ? (_RAM[_IY] = opcode & 0x00f & 0xf)
+                    : set_mem(_IY, opcode & 0x00f);
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1767,8 +1903,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) <<
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) <<
                       8) |
                     (_IX & 0x0ff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1785,8 +1925,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) <<
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) <<
                       4) |
                     (_IX & 0xf0f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1803,8 +1947,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) |
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) |
                     (_IX & 0xff0);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1820,8 +1968,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) +
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) +
                     (_CF << 4);
                   _CF = res & 0x1;
                   if (r === 0) {
@@ -1829,9 +1981,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (res >> 1) & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, res >> 1);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = (res >> 1) & 0xf)
+                      : set_mem(_IX, res >> 1);
                   } else {
-                    set_mem(_IY, res >> 1);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = (res >> 1) & 0xf)
+                      : set_mem(_IY, res >> 1);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1847,8 +2003,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) <<
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) <<
                       8) |
                     (_IY & 0x0ff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1865,8 +2025,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) <<
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) <<
                       4) |
                     (_IY & 0xf0f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1883,8 +2047,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) |
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) |
                     (_IY & 0xff0);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1905,9 +2073,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IX >> 8) & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, _IX >> 8);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = (_IX >> 8) & 0xf)
+                      : set_mem(_IX, _IX >> 8);
                   } else {
-                    set_mem(_IY, _IX >> 8);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = (_IX >> 8) & 0xf)
+                      : set_mem(_IY, _IX >> 8);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1922,9 +2094,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IX >> 4) & 0x00f & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, (_IX >> 4) & 0x00f);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = (_IX >> 4) & 0x00f & 0xf)
+                      : set_mem(_IX, (_IX >> 4) & 0x00f);
                   } else {
-                    set_mem(_IY, (_IX >> 4) & 0x00f);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = (_IX >> 4) & 0x00f & 0xf)
+                      : set_mem(_IY, (_IX >> 4) & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1939,9 +2115,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = _IX & 0x00f & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, _IX & 0x00f);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = _IX & 0x00f & 0xf)
+                      : set_mem(_IX, _IX & 0x00f);
                   } else {
-                    set_mem(_IY, _IX & 0x00f);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = _IX & 0x00f & 0xf)
+                      : set_mem(_IY, _IX & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1956,9 +2136,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IY >> 8) & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, _IY >> 8);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = (_IY >> 8) & 0xf)
+                      : set_mem(_IX, _IY >> 8);
                   } else {
-                    set_mem(_IY, _IY >> 8);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = (_IY >> 8) & 0xf)
+                      : set_mem(_IY, _IY >> 8);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1973,9 +2157,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_IY >> 4) & 0x00f & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, (_IY >> 4) & 0x00f);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = (_IY >> 4) & 0x00f & 0xf)
+                      : set_mem(_IX, (_IY >> 4) & 0x00f);
                   } else {
-                    set_mem(_IY, (_IY >> 4) & 0x00f);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = (_IY >> 4) & 0x00f & 0xf)
+                      : set_mem(_IY, (_IY >> 4) & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -1990,9 +2178,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = _IY & 0x00f & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, _IY & 0x00f);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = _IY & 0x00f & 0xf)
+                      : set_mem(_IX, _IY & 0x00f);
                   } else {
-                    set_mem(_IY, _IY & 0x00f);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = _IY & 0x00f & 0xf)
+                      : set_mem(_IY, _IY & 0x00f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2015,8 +2207,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY)) & 0xf;
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY)) & 0xf;
                   } else if (r === 1) {
                     _B =
                       (q === 0
@@ -2024,8 +2220,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY)) & 0xf;
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY)) & 0xf;
                   } else if (r === 2) {
                     set_mem(
                       _IX,
@@ -2034,8 +2234,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY),
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY),
                     );
                   } else {
                     set_mem(
@@ -2045,8 +2249,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY),
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY),
                     );
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2070,8 +2278,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY)) & 0xf;
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY)) & 0xf;
                   } else if (r === 1) {
                     _B =
                       (q === 0
@@ -2079,8 +2291,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY)) & 0xf;
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY)) & 0xf;
                   } else if (r === 2) {
                     set_mem(
                       _IX,
@@ -2089,8 +2305,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY),
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY),
                     );
                   } else {
                     set_mem(
@@ -2100,8 +2320,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY),
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY),
                     );
                   }
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
@@ -2121,8 +2345,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY)) & 0xf;
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY)) & 0xf;
                   } else if (r === 1) {
                     _B =
                       (q === 0
@@ -2130,8 +2358,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY)) & 0xf;
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY)) & 0xf;
                   } else if (r === 2) {
                     set_mem(
                       _IX,
@@ -2140,8 +2372,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY),
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY),
                     );
                   } else {
                     set_mem(
@@ -2151,8 +2387,12 @@ export class CPU {
                         : q === 1
                           ? _B
                           : q === 2
-                            ? get_mem(_IX)
-                            : get_mem(_IY),
+                            ? _IX < RAM_SIZE
+                              ? _RAM[_IX]
+                              : get_mem(_IX)
+                            : _IY < RAM_SIZE
+                              ? _RAM[_IY]
+                              : get_mem(_IY),
                     );
                   }
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
@@ -2179,15 +2419,23 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) -
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) -
                 (q === 0
                   ? _A
                   : q === 1
                     ? _B
                     : q === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY));
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY));
               _ZF = cp === 0 ? 1 : 0;
               _CF = cp < 0 ? 1 : 0;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2205,15 +2453,23 @@ export class CPU {
                   : r === 1
                     ? _B
                     : r === 2
-                      ? get_mem(_IX)
-                      : get_mem(_IY)) &
+                      ? _IX < RAM_SIZE
+                        ? _RAM[_IX]
+                        : get_mem(_IX)
+                      : _IY < RAM_SIZE
+                        ? _RAM[_IY]
+                        : get_mem(_IY)) &
                   (q === 0
                     ? _A
                     : q === 1
                       ? _B
                       : q === 2
-                        ? get_mem(_IX)
-                        : get_mem(_IY))) ===
+                        ? _IX < RAM_SIZE
+                          ? _RAM[_IX]
+                          : get_mem(_IX)
+                        : _IY < RAM_SIZE
+                          ? _RAM[_IY]
+                          : get_mem(_IY))) ===
                 0
                   ? 1
                   : 0;
@@ -2233,14 +2489,18 @@ export class CPU {
                   // M(X)←M(X)+r+C, X←X+1
                   const r = opcode & 0x3;
                   let res =
-                    get_mem(_IX) +
+                    (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) +
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) +
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) +
                     _CF;
                   _CF = res > 15 ? 1 : 0;
                   if (_DF && res > 9) {
@@ -2248,7 +2508,9 @@ export class CPU {
                     _CF = 1;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  set_mem(_IX, res & 0xf);
+                  _IX < RAM_SIZE
+                    ? (_RAM[_IX] = res & 0xf & 0xf)
+                    : set_mem(_IX, res & 0xf);
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -2259,14 +2521,18 @@ export class CPU {
                   // M(Y)←M(Y)+r+C, Y←Y+1
                   const r = opcode & 0x3;
                   let res =
-                    get_mem(_IY) +
+                    (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) +
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) +
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) +
                     _CF;
                   _CF = res > 15 ? 1 : 0;
                   if (_DF && res > 9) {
@@ -2274,7 +2540,9 @@ export class CPU {
                     _CF = 1;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  set_mem(_IY, res & 0xf);
+                  _IY < RAM_SIZE
+                    ? (_RAM[_IY] = res & 0xf & 0xf)
+                    : set_mem(_IY, res & 0xf);
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -2295,21 +2563,27 @@ export class CPU {
                   // M(X)←M(X)-r-C, X←X+1
                   const r = opcode & 0x3;
                   let res =
-                    get_mem(_IX) -
+                    (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) -
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) -
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) -
                     _CF;
                   _CF = res < 0 ? 1 : 0;
                   if (_DF && res < 0) {
                     res += 10;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  set_mem(_IX, res & 0xf);
+                  _IX < RAM_SIZE
+                    ? (_RAM[_IX] = res & 0xf & 0xf)
+                    : set_mem(_IX, res & 0xf);
                   _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -2320,21 +2594,27 @@ export class CPU {
                   // M(Y)←M(Y)-r-C, Y←Y+1
                   const r = opcode & 0x3;
                   let res =
-                    get_mem(_IY) -
+                    (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) -
                     (r === 0
                       ? _A
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) -
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) -
                     _CF;
                   _CF = res < 0 ? 1 : 0;
                   if (_DF && res < 0) {
                     res += 10;
                   }
                   _ZF = res & (0xf === 0) ? 1 : 0;
-                  set_mem(_IY, res & 0xf);
+                  _IY < RAM_SIZE
+                    ? (_RAM[_IY] = res & 0xf & 0xf)
+                    : set_mem(_IY, res & 0xf);
                   _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 7;
@@ -2371,10 +2651,10 @@ export class CPU {
               // inc_mn
               // M(n3~n0)←M(n3~n0)+1
               const mn = opcode & 0x00f;
-              const res = get_mem(mn) + 1;
+              const res = _RAM[mn] + 1;
               _ZF = res === 16 ? 1 : 0;
               _CF = res > 15 ? 1 : 0;
-              set_mem(mn, res & 0xf);
+              _RAM[mn] = res & 0xf & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
               break;
@@ -2383,10 +2663,10 @@ export class CPU {
               // dec_mn
               // M(n3~n0)←M(n3~n0)-1
               const mn = opcode & 0x00f;
-              const res = get_mem(mn) - 1;
+              const res = _RAM[mn] - 1;
               _ZF = res === 0 ? 1 : 0;
               _CF = res < 0 ? 1 : 0;
-              set_mem(mn, res & 0xf);
+              _RAM[mn] = res & 0xf & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
               break;
@@ -2394,7 +2674,7 @@ export class CPU {
             case 0x8: {
               // ld_mn_a
               // M(n3~n0)←A
-              set_mem(opcode & 0x00f, _A & 0xf);
+              _RAM[opcode & 0x00f] = _A & 0xf & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2402,7 +2682,7 @@ export class CPU {
             case 0x9: {
               // ld_mn_b
               // M(n3~n0)←B
-              set_mem(opcode & 0x00f, _B & 0xf);
+              _RAM[opcode & 0x00f] = _B & 0xf & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2410,7 +2690,7 @@ export class CPU {
             case 0xa: {
               // ld_a_mn
               // A←M(n3~n0)
-              _A = get_mem(opcode & 0x00f);
+              _A = _RAM[opcode & 0x00f];
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2418,7 +2698,7 @@ export class CPU {
             case 0xb: {
               // ld_b_mn
               // B←M(n3~n0)
-              _B = get_mem(opcode & 0x00f);
+              _B = _RAM[opcode & 0x00f];
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 5;
               break;
@@ -2439,8 +2719,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY),
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY),
                   );
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2450,7 +2734,7 @@ export class CPU {
                   // push_xp
                   // SP←SP-1, M(SP)←XP
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, _IX >> 8);
+                  _RAM[_SP] = (_IX >> 8) & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2459,7 +2743,7 @@ export class CPU {
                   // push_xh
                   // SP←SP-1, M(SP)←XH
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, (_IX >> 4) & 0x00f);
+                  _RAM[_SP] = (_IX >> 4) & 0x00f & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2468,7 +2752,7 @@ export class CPU {
                   // push_xl
                   // SP←SP-1, M(SP)←XL
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, _IX & 0x00f);
+                  _RAM[_SP] = _IX & 0x00f & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2477,7 +2761,7 @@ export class CPU {
                   // push_yp
                   // SP←SP-1, M(SP)←YP
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, _IY >> 8);
+                  _RAM[_SP] = (_IY >> 8) & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2486,7 +2770,7 @@ export class CPU {
                   // push_yh
                   // SP←SP-1, M(SP)←YH
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, (_IY >> 4) & 0x00f);
+                  _RAM[_SP] = (_IY >> 4) & 0x00f & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2495,7 +2779,7 @@ export class CPU {
                   // push_yl
                   // SP←SP-1, M(SP)←YL
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, _IY & 0x00f);
+                  _RAM[_SP] = _IY & 0x00f & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2504,7 +2788,8 @@ export class CPU {
                   // push_f
                   // SP←SP-1, M(SP)←F
                   _SP = (_SP - 1) & 0xff;
-                  set_mem(_SP, (_IF << 3) | (_DF << 2) | (_ZF << 1) | _CF);
+                  _RAM[_SP] =
+                    ((_IF << 3) | (_DF << 2) | (_ZF << 1) | _CF) & 0xf;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
                   break;
@@ -2534,13 +2819,17 @@ export class CPU {
                   // r←M(SP), SP←SP+1
                   const r = opcode & 0x3;
                   if (r === 0) {
-                    _A = get_mem(_SP) & 0xf;
+                    _A = _RAM[_SP] & 0xf;
                   } else if (r === 1) {
-                    _B = get_mem(_SP) & 0xf;
+                    _B = _RAM[_SP] & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, get_mem(_SP));
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = _RAM[_SP] & 0xf)
+                      : set_mem(_IX, _RAM[_SP]);
                   } else {
-                    set_mem(_IY, get_mem(_SP));
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = _RAM[_SP] & 0xf)
+                      : set_mem(_IY, _RAM[_SP]);
                   }
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2550,7 +2839,7 @@ export class CPU {
                 case 0x4: {
                   // pop_xp
                   // XP←M(SP), SP←SP+1
-                  _IX = (get_mem(_SP) << 8) | (_IX & 0x0ff);
+                  _IX = (_RAM[_SP] << 8) | (_IX & 0x0ff);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2559,7 +2848,7 @@ export class CPU {
                 case 0x5: {
                   // pop_xh
                   // XH←M(SP), SP←SP+1
-                  _IX = (get_mem(_SP) << 4) | (_IX & 0xf0f);
+                  _IX = (_RAM[_SP] << 4) | (_IX & 0xf0f);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2568,7 +2857,7 @@ export class CPU {
                 case 0x6: {
                   // pop_xl
                   // XL←M(SP), SP←SP+1
-                  _IX = get_mem(_SP) | (_IX & 0xff0);
+                  _IX = _RAM[_SP] | (_IX & 0xff0);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2577,7 +2866,7 @@ export class CPU {
                 case 0x7: {
                   // pop_yp
                   // YP←M(SP), SP←SP+1
-                  _IY = (get_mem(_SP) << 8) | (_IY & 0x0ff);
+                  _IY = (_RAM[_SP] << 8) | (_IY & 0x0ff);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2586,7 +2875,7 @@ export class CPU {
                 case 0x8: {
                   // pop_yh
                   // YH←M(SP), SP←SP+1
-                  _IY = (get_mem(_SP) << 4) | (_IY & 0xf0f);
+                  _IY = (_RAM[_SP] << 4) | (_IY & 0xf0f);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2595,7 +2884,7 @@ export class CPU {
                 case 0x9: {
                   // pop_yl
                   // YL←M(SP), SP←SP+1
-                  _IY = get_mem(_SP) | (_IY & 0xff0);
+                  _IY = _RAM[_SP] | (_IY & 0xff0);
                   _SP = (_SP + 1) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2604,7 +2893,7 @@ export class CPU {
                 case 0xa: {
                   // pop_f
                   // F←M(SP), SP←SP+1
-                  const f = get_mem(_SP);
+                  const f = _RAM[_SP];
                   _CF = f & 0x1;
                   _ZF = (f >> 1) & 0x1;
                   _DF = (f >> 2) & 0x1;
@@ -2634,9 +2923,9 @@ export class CPU {
                   // PCSL←M(SP), PCSH←M(SP+1), PCP←M(SP+2) SP←SP+3, PC←PC+1
                   _PC =
                     (_PC & 0x1000) |
-                    get_mem(_SP) |
-                    (get_mem(_SP + 1) << 4) |
-                    (get_mem(_SP + 2) << 8);
+                    _RAM[_SP] |
+                    (_RAM[_SP + 1] << 4) |
+                    (_RAM[_SP + 2] << 8);
                   _SP = (_SP + 3) & 0xff;
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 12;
@@ -2647,9 +2936,9 @@ export class CPU {
                   // PCSL←M(SP), PCSH←M(SP+1), PCP←M(SP+2) SP←SP+3
                   _PC = _NPC =
                     (_PC & 0x1000) |
-                    get_mem(_SP) |
-                    (get_mem(_SP + 1) << 4) |
-                    (get_mem(_SP + 2) << 8);
+                    _RAM[_SP] |
+                    (_RAM[_SP + 1] << 4) |
+                    (_RAM[_SP + 2] << 8);
                   _SP = (_SP + 3) & 0xff;
                   exec_cycles = 7;
                   break;
@@ -2671,8 +2960,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) <<
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) <<
                       4) |
                     (_SP & 0x0f);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2690,9 +2983,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = (_SP >> 4) & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, _SP >> 4);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = (_SP >> 4) & 0xf)
+                      : set_mem(_IX, _SP >> 4);
                   } else {
-                    set_mem(_IY, _SP >> 4);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = (_SP >> 4) & 0xf)
+                      : set_mem(_IY, _SP >> 4);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2727,8 +3024,12 @@ export class CPU {
                       : r === 1
                         ? _B
                         : r === 2
-                          ? get_mem(_IX)
-                          : get_mem(_IY)) |
+                          ? _IX < RAM_SIZE
+                            ? _RAM[_IX]
+                            : get_mem(_IX)
+                          : _IY < RAM_SIZE
+                            ? _RAM[_IY]
+                            : get_mem(_IY)) |
                     (_SP & 0xf0);
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2745,9 +3046,13 @@ export class CPU {
                   } else if (r === 1) {
                     _B = _SP & 0x0f & 0xf;
                   } else if (r === 2) {
-                    set_mem(_IX, _SP & 0x0f);
+                    _IX < RAM_SIZE
+                      ? (_RAM[_IX] = _SP & 0x0f & 0xf)
+                      : set_mem(_IX, _SP & 0x0f);
                   } else {
-                    set_mem(_IY, _SP & 0x0f);
+                    _IY < RAM_SIZE
+                      ? (_RAM[_IY] = _SP & 0x0f & 0xf)
+                      : set_mem(_IY, _SP & 0x0f);
                   }
                   _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
                   exec_cycles = 5;
@@ -2847,19 +3152,19 @@ export class CPU {
   }
 
   get_MX() {
-    return get_mem(_IX);
+    return _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX);
   }
 
   set_MX(value) {
-    set_mem(_IX, value);
+    _IX < RAM_SIZE ? (_RAM[_IX] = value & 0xf) : set_mem(_IX, value);
   }
 
   get_MY() {
-    return get_mem(_IY);
+    return _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY);
   }
 
   set_MY(value) {
-    set_mem(_IY, value);
+    _IY < RAM_SIZE ? (_RAM[_IY] = value & 0xf) : set_mem(_IY, value);
   }
 
   get_NPC() {
