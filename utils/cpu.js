@@ -968,6 +968,32 @@ export class CPU {
 
   clockBatch(n) {
     for (let i = 0; i < n; i += 1) {
+      if (
+        _HALT &&
+        !_RESET &&
+        (!_IF ||
+          _if_delay ||
+          (!(_IPT & _EIPT) &&
+            !(_ISIO & _EISIO) &&
+            !_IK1 &&
+            !_IK0 &&
+            !(_ISW & _EISW) &&
+            !(_IT & _EIT)))
+      ) {
+        const has_ptimer = (_PTC & IO_PTC) > 1;
+        const skip =
+          Math.min(
+            _timer_counter,
+            _stopwatch_counter,
+            has_ptimer ? _ptimer_counter : 2147483647,
+          ) - 1;
+        if (skip > 7) {
+          for (let t = 0; t < skip; t += 1) {
+            _clock_OSC1();
+          }
+          continue;
+        }
+      }
       this.clock();
     }
   }
