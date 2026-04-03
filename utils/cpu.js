@@ -2412,7 +2412,7 @@ function _clock() {
                 res += 6;
                 _CF = 1;
               }
-              _ZF = res & (0xf === 0) ? 1 : 0;
+              _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IX < RAM_SIZE
                 ? (_RAM[_IX] = res & 0xf & 0xf)
                 : set_mem(_IX, res & 0xf);
@@ -2444,7 +2444,7 @@ function _clock() {
                 res += 6;
                 _CF = 1;
               }
-              _ZF = res & (0xf === 0) ? 1 : 0;
+              _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IY < RAM_SIZE
                 ? (_RAM[_IY] = res & 0xf & 0xf)
                 : set_mem(_IY, res & 0xf);
@@ -2484,7 +2484,7 @@ function _clock() {
               if (_DF && res < 0) {
                 res += 10;
               }
-              _ZF = res & (0xf === 0) ? 1 : 0;
+              _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IX < RAM_SIZE
                 ? (_RAM[_IX] = res & 0xf & 0xf)
                 : set_mem(_IX, res & 0xf);
@@ -2515,7 +2515,7 @@ function _clock() {
               if (_DF && res < 0) {
                 res += 10;
               }
-              _ZF = res & (0xf === 0) ? 1 : 0;
+              _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IY < RAM_SIZE
                 ? (_RAM[_IY] = res & 0xf & 0xf)
                 : set_mem(_IY, res & 0xf);
