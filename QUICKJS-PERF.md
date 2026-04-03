@@ -53,12 +53,13 @@ It prints ops/s and µs/op for each case.
 
 ## Baseline
 
-| Metric | Value |
-|---|---|
+| Metric                | Value             |
+| --------------------- | ----------------- |
 | Watch processing time | ~1.3 ms / clock() |
-| Mac benchmark | ~600 k ops/s |
+| Mac benchmark         | ~600 k ops/s      |
 
 The original implementation used:
+
 - A per-opcode JavaScript function dispatch table (indirect call per instruction)
 - A per-IO-address handler function table (indirect call per memory access)
 - All CPU state stored as object properties (`this._PC`, `this._A`, …)
@@ -252,7 +253,7 @@ instruction. When sound is silent the entire sound hot-path collapses to
 
 ---
 
-### P19 — Extract clock() to module-level _clock()
+### P19 — Extract clock() to module-level \_clock()
 
 **What changed:** The `clock()` method body (~2 200 lines) was moved to a
 module-level `function _clock()`. `clockBatch` calls `_clock()` directly
@@ -312,7 +313,7 @@ boolean read.
 
 ---
 
-### P22 — Restructure _clock() to reduce per-instruction bytecode count
+### P22 — Restructure \_clock() to reduce per-instruction bytecode count
 
 **Three sub-changes applied together:**
 
@@ -376,25 +377,53 @@ also commented out at the call site to avoid unused-variable overhead.
 Sound events are infrequent but the string formatting cost is non-trivial
 in QuickJS each time they fire.
 
+### P25 — Remove redundant double-masks and shorten boolean ternaries
+
+**What changed (double-masks):** 81 expressions of the form `res & 0xf & 0xf`
+were simplified to `res & 0xf`. Because `x & 0xf & 0xf ≡ x & 0xf`, the
+second mask is a no-op but still generates a bytecode each time.
+
+**What changed (boolean ternaries):** 14 expressions of the form
+`res > 15 ? 1 : 0` and `res < 0 ? 1 : 0` were replaced with
+`(res > 15) | 0` and `(res < 0) | 0`. A comparison operator already
+produces a JS boolean; coercing it to an integer with `| 0` costs one
+bytecode, whereas the ternary requires four (if_false, push 1, goto,
+push 0).
+
+Also fixed in this pass: four instances of
+`_ZF = res & (0xf === 0) ? 1 : 0` — an operator-precedence bug where
+`===` binds tighter than `&`, causing `_ZF` to be hardcoded to 0 in the
+`acpy_mx_r`, `acpy_my_r`, `scpy_mx_r`, and `scpy_my_r` instructions.
+
+**Result:**
+| Metric | Before | After |
+|---|---|---|
+| Watch processing time | ~0.09–0.10 ms | **~0.09–0.10 ms** (confirmed stable) |
+
+The gain from the bytecode reductions is within measurement noise at this
+level, but the correctness fix for the zero flag is significant.
+
 ---
 
 ## Summary
 
-| Step | Watch time | Change |
-|---|---|---|
-| Baseline | ~1.3 ms | — |
-| clockBatch (batch loop) | ~0.7 ms | −46 % |
-| P13 (module-level CPU state) | ~0.6 ms | −14 % |
-| P14 + P15 (module functions, RAM fast-paths) | ~0.5–0.6 ms | ~−10 % |
-| **P17 (batch OSC1 ticks)** | **~0.2 ms** | **−60 %** |
-| **P18 (inline Sound state)** | **~0.1 ms** | **−50 %** |
-| P20 (opcode table, dead multiply) | ~0.11–0.12 ms | −15 % |
-| P21–P23 (integer arithmetic, cached flags, restructure) | ~0.10–0.11 ms | ~−10 % |
-| P24 (disable ToneGenerator logs) | ~0.09–0.10 ms | ~−5 % |
+| Step                                                    | Watch time    | Change       |
+| ------------------------------------------------------- | ------------- | ------------ |
+| Baseline                                                | ~1.3 ms       | —            |
+| clockBatch (batch loop)                                 | ~0.7 ms       | −46 %        |
+| P13 (module-level CPU state)                            | ~0.6 ms       | −14 %        |
+| P14 + P15 (module functions, RAM fast-paths)            | ~0.5–0.6 ms   | ~−10 %       |
+| **P17 (batch OSC1 ticks)**                              | **~0.2 ms**   | **−60 %**    |
+| **P18 (inline Sound state)**                            | **~0.1 ms**   | **−50 %**    |
+| P20 (opcode table, dead multiply)                       | ~0.11–0.12 ms | −15 %        |
+| P21–P23 (integer arithmetic, cached flags, restructure) | ~0.10–0.11 ms | ~−10 %       |
+| P24 (disable ToneGenerator logs)                        | ~0.09–0.10 ms | ~−5 %        |
+| P25 (double-mask removal, boolean ternary shortening)   | ~0.09–0.10 ms | within noise |
 
 **Total improvement: ~1.3 ms → ~0.09–0.10 ms (~13–14× faster)**
 
 The two dominant gains were:
+
 - **P17** — eliminating 10–14 function calls per instruction by batching
   OSC1 tick counter updates.
 - **P18** — eliminating the per-instruction `_sound.batch()` method
