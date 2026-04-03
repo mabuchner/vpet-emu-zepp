@@ -426,6 +426,23 @@ level, but the correctness fix for the zero flag is significant.
 Gains are within measurement noise at this level; the value is in the
 cumulative bytecode reduction.
 
+### P27 — Hoist IX/IY RAM guard in acpx/scpx/acpy/scpy (no measurable improvement)
+
+**What changed:** In `acpx_mx_r`, `acpy_my_r`, `scpx_mx_r`, and
+`scpy_my_r` the condition `_IX < RAM_SIZE` (or `_IY`) was evaluated twice
+per instruction — once for the read of M(X)/M(Y) and once for the
+write-back. The check was hoisted into a `const ixInRam` / `const iyInRam`
+local variable, saving one comparison across the four cases (~12 bytecodes
+total).
+
+**Result:**
+| Metric | Before | After |
+|---|---|---|
+| Watch processing time | ~0.09–0.10 ms | ~0.09–0.10 ms (no change) |
+
+These instructions are used infrequently in Tamagotchi P1 code, so the
+saved comparisons have no measurable effect at runtime.
+
 ---
 
 ## Summary
@@ -443,6 +460,7 @@ cumulative bytecode reduction.
 | P24 (disable ToneGenerator logs)                        | ~0.09–0.10 ms | ~−5 %        |
 | P25 (double-mask removal, boolean ternary shortening)   | ~0.09–0.10 ms | within noise |
 | P26 (remaining boolean ternary shortening, 42 cases)    | ~0.09–0.10 ms | within noise |
+| P27 (hoist IX/IY RAM guard in acpx/scpx/acpy/scpy)      | ~0.09–0.10 ms | no change    |
 
 **Total improvement: ~1.3 ms → ~0.09–0.10 ms (~13–14× faster)**
 
