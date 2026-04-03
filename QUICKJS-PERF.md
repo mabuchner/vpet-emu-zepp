@@ -403,6 +403,29 @@ Also fixed in this pass: four instances of
 The gain from the bytecode reductions is within measurement noise at this
 level, but the correctness fix for the zero flag is significant.
 
+### P26 — Shorten remaining boolean ternaries to bitwise-OR coercion
+
+**What changed:** A second pass over all remaining `? 1 : 0` expressions
+(42 total) that the P25 pass did not cover:
+
+- **Comparison ternaries (13):** `xh > 15 ? 1 : 0`, `cp < 0 ? 1 : 0`,
+  and three `> 0` checks in the sound/IO path replaced with `| 0`.
+- **Zero-equality ternaries (28):** `(expr) === 0 ? 1 : 0` replaced with
+  `!(expr) | 0`, and `word === 0 ? 1 : 0` replaced with `!word | 0`.
+  The logical NOT on an integer costs one bytecode; `| 0` costs one more
+  to coerce the boolean to an integer — two bytecodes total versus four
+  for the ternary.
+- **One non-zero equality (1):** `res === 16 ? 1 : 0` replaced with
+  `(res === 16) | 0`.
+
+**Result:**
+| Metric | Before | After |
+|---|---|---|
+| Watch processing time | ~0.09–0.10 ms | **~0.09–0.10 ms** (confirmed stable) |
+
+Gains are within measurement noise at this level; the value is in the
+cumulative bytecode reduction.
+
 ---
 
 ## Summary
@@ -419,6 +442,7 @@ level, but the correctness fix for the zero flag is significant.
 | P21–P23 (integer arithmetic, cached flags, restructure) | ~0.10–0.11 ms | ~−10 %       |
 | P24 (disable ToneGenerator logs)                        | ~0.09–0.10 ms | ~−5 %        |
 | P25 (double-mask removal, boolean ternary shortening)   | ~0.09–0.10 ms | within noise |
+| P26 (remaining boolean ternary shortening, 42 cases)    | ~0.09–0.10 ms | within noise |
 
 **Total improvement: ~1.3 ms → ~0.09–0.10 ms (~13–14× faster)**
 
