@@ -5,13 +5,13 @@ export class ToneGenerator {
     this.vibration = new Vibrator();
   }
 
-  play(freq, noise, dutyRatio, goalTime) {
-    console.log(`play(${freq}, ${noise}, ${dutyRatio}, ${goalTime})`);
+  play(/* freq, noise, dutyRatio, goalTime */) {
+    // console.log(`play(${freq}, ${noise}, ${dutyRatio}, ${goalTime})`);
     this.vibration.setMode(VIBRATOR_SCENE_SHORT_MIDDLE);
     this.vibration.start();
   }
 
-  stop(goalTime) {
-    console.log(`stop(${goalTime})`);
+  stop(/* goalTime */) {
+    // console.log(`stop(${goalTime})`);
   }
 }
