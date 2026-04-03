@@ -2357,14 +2357,15 @@ function _clock() {
               // acpx_mx_r
               // M(X)←M(X)+r+C, X←X+1
               const r = opcode & 0x3;
+              const ixInRam = _IX < RAM_SIZE;
               let res =
-                (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) +
+                (ixInRam ? _RAM[_IX] : get_mem(_IX)) +
                 (r === 0
                   ? _A
                   : r === 1
                     ? _B
                     : r === 2
-                      ? _IX < RAM_SIZE
+                      ? ixInRam
                         ? _RAM[_IX]
                         : get_mem(_IX)
                       : _IY < RAM_SIZE
@@ -2377,9 +2378,7 @@ function _clock() {
                 _CF = 1;
               }
               _ZF = !(res & 0xf) | 0;
-              _IX < RAM_SIZE
-                ? (_RAM[_IX] = res & 0xf)
-                : set_mem(_IX, res & 0xf);
+              ixInRam ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
               _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -2389,8 +2388,9 @@ function _clock() {
               // acpy_my_r
               // M(Y)←M(Y)+r+C, Y←Y+1
               const r = opcode & 0x3;
+              const iyInRam = _IY < RAM_SIZE;
               let res =
-                (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) +
+                (iyInRam ? _RAM[_IY] : get_mem(_IY)) +
                 (r === 0
                   ? _A
                   : r === 1
@@ -2399,7 +2399,7 @@ function _clock() {
                       ? _IX < RAM_SIZE
                         ? _RAM[_IX]
                         : get_mem(_IX)
-                      : _IY < RAM_SIZE
+                      : iyInRam
                         ? _RAM[_IY]
                         : get_mem(_IY)) +
                 _CF;
@@ -2409,9 +2409,7 @@ function _clock() {
                 _CF = 1;
               }
               _ZF = !(res & 0xf) | 0;
-              _IY < RAM_SIZE
-                ? (_RAM[_IY] = res & 0xf)
-                : set_mem(_IY, res & 0xf);
+              iyInRam ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
               _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -2430,14 +2428,15 @@ function _clock() {
               // scpx_mx_r
               // M(X)←M(X)-r-C, X←X+1
               const r = opcode & 0x3;
+              const ixInRam = _IX < RAM_SIZE;
               let res =
-                (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) -
+                (ixInRam ? _RAM[_IX] : get_mem(_IX)) -
                 (r === 0
                   ? _A
                   : r === 1
                     ? _B
                     : r === 2
-                      ? _IX < RAM_SIZE
+                      ? ixInRam
                         ? _RAM[_IX]
                         : get_mem(_IX)
                       : _IY < RAM_SIZE
@@ -2449,9 +2448,7 @@ function _clock() {
                 res += 10;
               }
               _ZF = !(res & 0xf) | 0;
-              _IX < RAM_SIZE
-                ? (_RAM[_IX] = res & 0xf)
-                : set_mem(_IX, res & 0xf);
+              ixInRam ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
               _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
@@ -2461,8 +2458,9 @@ function _clock() {
               // scpy_my_r
               // M(Y)←M(Y)-r-C, Y←Y+1
               const r = opcode & 0x3;
+              const iyInRam = _IY < RAM_SIZE;
               let res =
-                (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) -
+                (iyInRam ? _RAM[_IY] : get_mem(_IY)) -
                 (r === 0
                   ? _A
                   : r === 1
@@ -2471,7 +2469,7 @@ function _clock() {
                       ? _IX < RAM_SIZE
                         ? _RAM[_IX]
                         : get_mem(_IX)
-                      : _IY < RAM_SIZE
+                      : iyInRam
                         ? _RAM[_IY]
                         : get_mem(_IY)) -
                 _CF;
@@ -2480,9 +2478,7 @@ function _clock() {
                 res += 10;
               }
               _ZF = !(res & 0xf) | 0;
-              _IY < RAM_SIZE
-                ? (_RAM[_IY] = res & 0xf)
-                : set_mem(_IY, res & 0xf);
+              iyInRam ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
               _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               exec_cycles = 7;
