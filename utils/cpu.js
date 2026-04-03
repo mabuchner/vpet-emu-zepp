@@ -224,6 +224,7 @@ let _RESET = 0;
 let _if_delay = false;
 let _instr_counter = 0;
 let _ROM_data = null;
+let _ROM_opcodes = null;
 let _RAM = null;
 let _ROM = null;
 let _tone_generator = null;
@@ -832,8 +833,7 @@ function _clock() {
 
   if (!_HALT) {
     _if_delay = false;
-    const pcAddr = _PC * 2;
-    const opcode = (_ROM_data[pcAddr] << 8) | _ROM_data[pcAddr + 1];
+    const opcode = _ROM_opcodes[_PC];
 
     switch (opcode >> 8) {
       case 0x0: {
@@ -3010,8 +3010,6 @@ function _clock() {
       _timer_counter += TIMER_CLOCK_DIV;
       _process_timer();
     }
-
-    exec_cycles *= _OSC1_clock_div;
   } else {
     // IO_CLKCHG mode: CPU runs on high-frequency oscillator; OSC1 advances
     // fractionally per CPU cycle, so use the original counter-based approach.
@@ -3029,6 +3027,11 @@ export class CPU {
   constructor(rom, clock, toneGenerator) {
     _ROM = rom;
     _ROM_data = rom._data;
+    const romWordCount = _ROM_data.length >> 1;
+    _ROM_opcodes = new Uint16Array(romWordCount);
+    for (let i = 0; i < romWordCount; i += 1) {
+      _ROM_opcodes[i] = (_ROM_data[i * 2] << 8) | _ROM_data[i * 2 + 1];
+    }
     _tone_generator = toneGenerator;
     _snd_buzzer_freq = OSC1_CLOCK / SND_BUZZER_FREQ_DIV[0];
     _snd_envelope_cycle = SND_ENVELOPE_CYCLE_DIV[0];
