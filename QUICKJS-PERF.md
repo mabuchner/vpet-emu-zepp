@@ -325,6 +325,21 @@ single boolean read (2 bytecodes).
 | Mac benchmark | ~1 250 k ops/s | **~1 272 k ops/s** (+1.8 %) |
 | Watch processing time | ~0.10–0.11 ms | ~0.10–0.11 ms (no further change) |
 
+### P24 — Disable ToneGenerator console.log calls
+
+**What changed:** `ToneGenerator.play()` and `ToneGenerator.stop()` each
+contained a `console.log()` call that formatted and printed a string on
+every sound event. These were commented out. The method parameters were
+also commented out at the call site to avoid unused-variable overhead.
+
+**Result:**
+| Metric | Before | After |
+|---|---|---|
+| Watch processing time | ~0.10–0.11 ms | **~0.09–0.10 ms** |
+
+Sound events are infrequent but the string formatting cost is non-trivial
+in QuickJS each time they fire.
+
 ---
 
 ## Summary
@@ -339,8 +354,9 @@ single boolean read (2 bytecodes).
 | **P18 (inline Sound state)** | **~0.1 ms** | **−50 %** |
 | P20 (opcode table, dead multiply) | ~0.11–0.12 ms | −15 % |
 | P21–P23 (integer arithmetic, cached flags, restructure) | ~0.10–0.11 ms | ~−10 % |
+| P24 (disable ToneGenerator logs) | ~0.09–0.10 ms | ~−5 % |
 
-**Total improvement: ~1.3 ms → ~0.10 ms (~13× faster)**
+**Total improvement: ~1.3 ms → ~0.09–0.10 ms (~13–14× faster)**
 
 The two dominant gains were:
 - **P17** — eliminating 10–14 function calls per instruction by batching
