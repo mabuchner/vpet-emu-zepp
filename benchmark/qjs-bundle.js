@@ -674,1226 +674,1224 @@
     _snd_envelope_step = 7;
   }
   function _clock() {
-    let exec_cycles = 7;
     if (_RESET) {
-      return exec_cycles;
+      return 0;
     }
-    if (!_HALT) {
-      _if_delay = false;
-      const opcode = _ROM_opcodes[_PC];
-      switch (opcode >> 8) {
-        case 0: {
-          _PC = _NPC & 7936 | opcode & 255;
-          exec_cycles = 5;
-          break;
-        }
-        case 1: {
-          _PC = _NPC = _PC & 4096 | _RAM[_SP + 2] << 8 | _RAM[_SP + 1] << 4 | _RAM[_SP];
-          _SP = _SP + 3 & 255;
-          _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
-          set_mem(_IX & 3840 | _IX + 1 & 255, opcode >> 4 & 15);
-          _IX = _IX & 3840 | _IX + 2 & 255;
-          exec_cycles = 12;
-          break;
-        }
-        case 2: {
-          if (_CF) {
-            _PC = _NPC & 7936 | opcode & 255;
-          } else {
-            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          }
-          exec_cycles = 5;
-          break;
-        }
-        case 3: {
-          if (!_CF) {
-            _PC = _NPC & 7936 | opcode & 255;
-          } else {
-            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          }
-          exec_cycles = 5;
-          break;
-        }
-        case 4: {
-          _RAM[_SP - 1 & 255] = _PC + 1 >> 8 & 15 & 15;
-          _RAM[_SP - 2 & 255] = _PC + 1 >> 4 & 15 & 15;
-          _SP = _SP - 3 & 255;
-          _RAM[_SP] = _PC + 1 & 15 & 15;
-          _PC = _NPC & 7936 | opcode & 255;
-          exec_cycles = 7;
-          break;
-        }
-        case 5: {
-          _RAM[_SP - 1 & 255] = _PC + 1 >> 8 & 15 & 15;
-          _RAM[_SP - 2 & 255] = _PC + 1 >> 4 & 15 & 15;
-          _SP = _SP - 3 & 255;
-          _RAM[_SP] = _PC + 1 & 15 & 15;
-          _PC = _NPC = _NPC & 4096 | opcode & 255;
-          exec_cycles = 7;
-          break;
-        }
-        case 6: {
-          if (_ZF) {
-            _PC = _NPC & 7936 | opcode & 255;
-          } else {
-            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          }
-          exec_cycles = 5;
-          break;
-        }
-        case 7: {
-          if (!_ZF) {
-            _PC = _NPC & 7936 | opcode & 255;
-          } else {
-            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          }
-          exec_cycles = 5;
-          break;
-        }
-        case 8: {
-          _IY = _IY & 3840 | opcode & 255;
-          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          exec_cycles = 5;
-          break;
-        }
-        case 9: {
-          _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
-          set_mem(_IX & 3840 | _IX + 1 & 255, opcode >> 4 & 15);
-          _IX = _IX & 3840 | _IX + 2 & 255;
-          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          exec_cycles = 5;
-          break;
-        }
-        case 10: {
-          switch (opcode >> 4 & 15) {
-            case 0: {
-              const xh = (_IX >> 4 & 15) + (opcode & 15) + _CF;
-              _ZF = (xh & 15) === 0 ? 1 : 0;
-              _CF = xh > 15 ? 1 : 0;
-              _IX = _IX & 3855 | xh << 4 & 240;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 1: {
-              const xl = (_IX & 15) + (opcode & 15) + _CF;
-              _ZF = (xl & 15) === 0 ? 1 : 0;
-              _CF = xl > 15 ? 1 : 0;
-              _IX = _IX & 4080 | xl & 15;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 2: {
-              const yh = (_IY >> 4 & 15) + (opcode & 15) + _CF;
-              _ZF = (yh & 15) === 0 ? 1 : 0;
-              _CF = yh > 15 ? 1 : 0;
-              _IY = _IY & 3855 | yh << 4 & 240;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 3: {
-              const yl = (_IY & 15) + (opcode & 15) + _CF;
-              _ZF = (yl & 15) === 0 ? 1 : 0;
-              _CF = yl > 15 ? 1 : 0;
-              _IY = _IY & 4080 | yl & 15;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 4: {
-              const cp = (_IX >> 4 & 15) - (opcode & 15);
-              _ZF = cp === 0 ? 1 : 0;
-              _CF = cp < 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 5: {
-              const cp = (_IX & 15) - (opcode & 15);
-              _ZF = cp === 0 ? 1 : 0;
-              _CF = cp < 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 6: {
-              const cp = (_IY >> 4 & 15) - (opcode & 15);
-              _ZF = cp === 0 ? 1 : 0;
-              _CF = cp < 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 7: {
-              const cp = (_IY & 15) - (opcode & 15);
-              _ZF = cp === 0 ? 1 : 0;
-              _CF = cp < 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 8: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
-              _CF = res > 15 ? 1 : 0;
-              if (_DF && res > 9) {
-                res += 6;
-                _CF = 1;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 9: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + _CF;
-              _CF = res > 15 ? 1 : 0;
-              if (_DF && res > 9) {
-                res += 6;
-                _CF = 1;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 10: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
-              _CF = res < 0 ? 1 : 0;
-              if (_DF && res < 0) {
-                res += 10;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 11: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - _CF;
-              _CF = res < 0 ? 1 : 0;
-              if (_DF && res < 0) {
-                res += 10;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 12: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
-              _ZF = res === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15;
-              } else if (r === 1) {
-                _B = res & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 13: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
-              _ZF = res === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15;
-              } else if (r === 1) {
-                _B = res & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 14: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) ^ (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
-              _ZF = res === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15;
-              } else if (r === 1) {
-                _B = res & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 15: {
-              const r = opcode & 3;
-              const res = ((r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 1) + _CF;
-              _CF = res > 15 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-          }
-          break;
-        }
-        case 11: {
-          _IX = _IX & 3840 | opcode & 255;
-          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-          exec_cycles = 5;
-          break;
-        }
-        case 12: {
-          switch (opcode >> 6 & 3) {
-            case 0: {
-              const r = opcode >> 4 & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (opcode & 15);
-              _CF = res > 15 ? 1 : 0;
-              if (_DF && res > 9) {
-                res += 6;
-                _CF = 1;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 1: {
-              const r = opcode >> 4 & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (opcode & 15) + _CF;
-              _CF = res > 15 ? 1 : 0;
-              if (_DF && res > 9) {
-                res += 6;
-                _CF = 1;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 2: {
-              const r = opcode >> 4 & 3;
-              const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & opcode & 15;
-              _ZF = res === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15;
-              } else if (r === 1) {
-                _B = res & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 3: {
-              const r = opcode >> 4 & 3;
-              const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | opcode & 15;
-              _ZF = res === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15;
-              } else if (r === 1) {
-                _B = res & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-          }
-          break;
-        }
-        case 13: {
-          switch (opcode >> 6 & 3) {
-            case 0: {
-              const r = opcode >> 4 & 3;
-              const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) ^ opcode & 15;
-              _ZF = res === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15;
-              } else if (r === 1) {
-                _B = res & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 1: {
-              const r = opcode >> 4 & 3;
-              let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (opcode & 15) - _CF;
-              _CF = res < 0 ? 1 : 0;
-              if (_DF && _CF) {
-                res += 10;
-              }
-              _ZF = (res & 15) === 0 ? 1 : 0;
-              if (r === 0) {
-                _A = res & 15 & 15;
-              } else if (r === 1) {
-                _B = res & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 2: {
-              const r = opcode >> 4 & 3;
-              _ZF = ((r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & opcode & 15) === 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 3: {
-              const r = opcode >> 4 & 3;
-              const cp = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (opcode & 15);
-              _ZF = cp === 0 ? 1 : 0;
-              _CF = cp < 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-          }
-          break;
-        }
-        case 14: {
-          switch (opcode >> 6 & 3) {
-            case 0: {
-              const r = opcode >> 4 & 3;
-              if (r === 0) {
-                _A = opcode & 15 & 15;
-              } else if (r === 1) {
-                _B = opcode & 15 & 15;
-              } else if (r === 2) {
-                _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
-              } else {
-                _IY < RAM_SIZE ? _RAM[_IY] = opcode & 15 & 15 : set_mem(_IY, opcode & 15);
-              }
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 5;
-              break;
-            }
-            case 1: {
-              switch (opcode >> 4 & 3) {
-                case 0:
-                // pset_p
-                case 1: {
-                  _if_delay = true;
-                  _NPC = opcode << 8 & 7936;
-                  _PC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 2: {
-                  _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
-                  _IX = _IX & 3840 | _IX + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 3: {
-                  _IY < RAM_SIZE ? _RAM[_IY] = opcode & 15 & 15 : set_mem(_IY, opcode & 15);
-                  _IY = _IY & 3840 | _IY + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-              }
-              break;
-            }
-            case 2: {
-              switch (opcode >> 2 & 15) {
-                case 0: {
-                  const r = opcode & 3;
-                  _IX = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 8 | _IX & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 1: {
-                  const r = opcode & 3;
-                  _IX = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 4 | _IX & 3855;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 2: {
-                  const r = opcode & 3;
-                  _IX = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | _IX & 4080;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 3: {
-                  const r = opcode & 3;
-                  const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (_CF << 4);
-                  _CF = res & 1;
-                  if (r === 0) {
-                    _A = res >> 1 & 15;
-                  } else if (r === 1) {
-                    _B = res >> 1 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = res >> 1 & 15 : set_mem(_IX, res >> 1);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = res >> 1 & 15 : set_mem(_IY, res >> 1);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 4: {
-                  const r = opcode & 3;
-                  _IY = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 8 | _IY & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 5: {
-                  const r = opcode & 3;
-                  _IY = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 4 | _IY & 3855;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 6: {
-                  const r = opcode & 3;
-                  _IY = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | _IY & 4080;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 7:
-                // dummy
-                case 11:
-                // dummy
-                case 15: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 8: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _IX >> 8 & 15;
-                  } else if (r === 1) {
-                    _B = _IX >> 8 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _IX >> 8 & 15 : set_mem(_IX, _IX >> 8);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _IX >> 8 & 15 : set_mem(_IY, _IX >> 8);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 9: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _IX >> 4 & 15 & 15;
-                  } else if (r === 1) {
-                    _B = _IX >> 4 & 15 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _IX >> 4 & 15 & 15 : set_mem(_IX, _IX >> 4 & 15);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _IX >> 4 & 15 & 15 : set_mem(_IY, _IX >> 4 & 15);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 10: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _IX & 15 & 15;
-                  } else if (r === 1) {
-                    _B = _IX & 15 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _IX & 15 & 15 : set_mem(_IX, _IX & 15);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _IX & 15 & 15 : set_mem(_IY, _IX & 15);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 12: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _IY >> 8 & 15;
-                  } else if (r === 1) {
-                    _B = _IY >> 8 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _IY >> 8 & 15 : set_mem(_IX, _IY >> 8);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _IY >> 8 & 15 : set_mem(_IY, _IY >> 8);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 13: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _IY >> 4 & 15 & 15;
-                  } else if (r === 1) {
-                    _B = _IY >> 4 & 15 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _IY >> 4 & 15 & 15 : set_mem(_IX, _IY >> 4 & 15);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _IY >> 4 & 15 & 15 : set_mem(_IY, _IY >> 4 & 15);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 14: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _IY & 15 & 15;
-                  } else if (r === 1) {
-                    _B = _IY & 15 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _IY & 15 & 15 : set_mem(_IX, _IY & 15);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _IY & 15 & 15 : set_mem(_IY, _IY & 15);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-              }
-              break;
-            }
-            case 3: {
-              switch (opcode >> 4 & 3) {
-                case 0: {
-                  const r = opcode >> 2 & 3;
-                  const q = opcode & 3;
-                  if (r === 0) {
-                    _A = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
-                  } else if (r === 1) {
-                    _B = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
-                  } else if (r === 2) {
-                    set_mem(
-                      _IX,
-                      q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                    );
-                  } else {
-                    set_mem(
-                      _IY,
-                      q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                    );
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 1: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 2: {
-                  const r = opcode >> 2 & 3;
-                  const q = opcode & 3;
-                  if (r === 0) {
-                    _A = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
-                  } else if (r === 1) {
-                    _B = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
-                  } else if (r === 2) {
-                    set_mem(
-                      _IX,
-                      q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                    );
-                  } else {
-                    set_mem(
-                      _IY,
-                      q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                    );
-                  }
-                  _IX = _IX & 3840 | _IX + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 3: {
-                  const r = opcode >> 2 & 3;
-                  const q = opcode & 3;
-                  if (r === 0) {
-                    _A = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
-                  } else if (r === 1) {
-                    _B = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
-                  } else if (r === 2) {
-                    set_mem(
-                      _IX,
-                      q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                    );
-                  } else {
-                    set_mem(
-                      _IY,
-                      q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                    );
-                  }
-                  _IY = _IY & 3840 | _IY + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-              }
-              break;
-            }
-          }
-          break;
-        }
-        case 15: {
-          switch (opcode >> 4 & 15) {
-            case 0: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              const cp = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
-              _ZF = cp === 0 ? 1 : 0;
-              _CF = cp < 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 1: {
-              const r = opcode >> 2 & 3;
-              const q = opcode & 3;
-              _ZF = ((r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY))) === 0 ? 1 : 0;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 2: {
-              switch (opcode >> 2 & 3) {
-                case 0:
-                // dummy
-                case 1: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 2: {
-                  const r = opcode & 3;
-                  let res = (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) + (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + _CF;
-                  _CF = res > 15 ? 1 : 0;
-                  if (_DF && res > 9) {
-                    res += 6;
-                    _CF = 1;
-                  }
-                  _ZF = res & false ? 1 : 0;
-                  _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-                  _IX = _IX & 3840 | _IX + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 7;
-                  break;
-                }
-                case 3: {
-                  const r = opcode & 3;
-                  let res = (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + _CF;
-                  _CF = res > 15 ? 1 : 0;
-                  if (_DF && res > 9) {
-                    res += 6;
-                    _CF = 1;
-                  }
-                  _ZF = res & false ? 1 : 0;
-                  _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-                  _IY = _IY & 3840 | _IY + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 7;
-                  break;
-                }
-              }
-              break;
-            }
-            case 3: {
-              switch (opcode >> 2 & 3) {
-                case 0:
-                // dummy
-                case 1: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 2: {
-                  const r = opcode & 3;
-                  let res = (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) - (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - _CF;
-                  _CF = res < 0 ? 1 : 0;
-                  if (_DF && res < 0) {
-                    res += 10;
-                  }
-                  _ZF = res & false ? 1 : 0;
-                  _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
-                  _IX = _IX & 3840 | _IX + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 7;
-                  break;
-                }
-                case 3: {
-                  const r = opcode & 3;
-                  let res = (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - _CF;
-                  _CF = res < 0 ? 1 : 0;
-                  if (_DF && res < 0) {
-                    res += 10;
-                  }
-                  _ZF = res & false ? 1 : 0;
-                  _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
-                  _IY = _IY & 3840 | _IY + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 7;
-                  break;
-                }
-              }
-              break;
-            }
-            case 4: {
-              _CF |= opcode & 1;
-              _ZF |= opcode >> 1 & 1;
-              _DF |= opcode >> 2 & 1;
-              const new_IF = opcode >> 3 & 1;
-              _if_delay = new_IF && !_IF;
-              _IF |= new_IF;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 5: {
-              _CF &= opcode;
-              _ZF &= opcode >> 1;
-              _DF &= opcode >> 2;
-              _IF &= opcode >> 3;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 6: {
-              const mn = opcode & 15;
-              const res = _RAM[mn] + 1;
-              _ZF = res === 16 ? 1 : 0;
-              _CF = res > 15 ? 1 : 0;
-              _RAM[mn] = res & 15 & 15;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 7: {
-              const mn = opcode & 15;
-              const res = _RAM[mn] - 1;
-              _ZF = res === 0 ? 1 : 0;
-              _CF = res < 0 ? 1 : 0;
-              _RAM[mn] = res & 15 & 15;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 7;
-              break;
-            }
-            case 8: {
-              _RAM[opcode & 15] = _A & 15 & 15;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 5;
-              break;
-            }
-            case 9: {
-              _RAM[opcode & 15] = _B & 15 & 15;
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 5;
-              break;
-            }
-            case 10: {
-              _A = _RAM[opcode & 15];
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 5;
-              break;
-            }
-            case 11: {
-              _B = _RAM[opcode & 15];
-              _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-              exec_cycles = 5;
-              break;
-            }
-            case 12: {
-              switch (opcode & 15) {
-                case 0:
-                // push_r
-                case 1:
-                case 2:
-                case 3: {
-                  const r = opcode & 3;
-                  _SP = _SP - 1 & 255;
-                  set_mem(
-                    _SP,
-                    r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
-                  );
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 4: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = _IX >> 8 & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 5: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = _IX >> 4 & 15 & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 6: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = _IX & 15 & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 7: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = _IY >> 8 & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 8: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = _IY >> 4 & 15 & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 9: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = _IY & 15 & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 10: {
-                  _SP = _SP - 1 & 255;
-                  _RAM[_SP] = (_IF << 3 | _DF << 2 | _ZF << 1 | _CF) & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 11: {
-                  _SP = _SP - 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                default: {
-                  exec_cycles = 5;
-                  break;
-                }
-              }
-              break;
-            }
-            case 13: {
-              switch (opcode & 15) {
-                case 0:
-                // pop_r
-                case 1:
-                case 2:
-                case 3: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _RAM[_SP] & 15;
-                  } else if (r === 1) {
-                    _B = _RAM[_SP] & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _RAM[_SP] & 15 : set_mem(_IX, _RAM[_SP]);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _RAM[_SP] & 15 : set_mem(_IY, _RAM[_SP]);
-                  }
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 4: {
-                  _IX = _RAM[_SP] << 8 | _IX & 255;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 5: {
-                  _IX = _RAM[_SP] << 4 | _IX & 3855;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 6: {
-                  _IX = _RAM[_SP] | _IX & 4080;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 7: {
-                  _IY = _RAM[_SP] << 8 | _IY & 255;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 8: {
-                  _IY = _RAM[_SP] << 4 | _IY & 3855;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 9: {
-                  _IY = _RAM[_SP] | _IY & 4080;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 10: {
-                  const f = _RAM[_SP];
-                  _CF = f & 1;
-                  _ZF = f >> 1 & 1;
-                  _DF = f >> 2 & 1;
-                  const new_IF = f >> 3 & 1;
-                  _if_delay = new_IF && !_IF;
-                  _IF = new_IF;
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 11: {
-                  _SP = _SP + 1 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 12:
-                // dummy
-                case 13: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 14: {
-                  _PC = _PC & 4096 | _RAM[_SP] | _RAM[_SP + 1] << 4 | _RAM[_SP + 2] << 8;
-                  _SP = _SP + 3 & 255;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 12;
-                  break;
-                }
-                case 15: {
-                  _PC = _NPC = _PC & 4096 | _RAM[_SP] | _RAM[_SP + 1] << 4 | _RAM[_SP + 2] << 8;
-                  _SP = _SP + 3 & 255;
-                  exec_cycles = 7;
-                  break;
-                }
-              }
-              break;
-            }
-            case 14: {
-              switch (opcode & 15) {
-                case 0:
-                // ld_sph_r
-                case 1:
-                case 2:
-                case 3: {
-                  const r = opcode & 3;
-                  _SP = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 4 | _SP & 15;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 4:
-                // ld_r_sph
-                case 5:
-                case 6:
-                case 7: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _SP >> 4 & 15;
-                  } else if (r === 1) {
-                    _B = _SP >> 4 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _SP >> 4 & 15 : set_mem(_IX, _SP >> 4);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _SP >> 4 & 15 : set_mem(_IY, _SP >> 4);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 8: {
-                  _PC = _NPC & 7936 | _B << 4 | _A;
-                  exec_cycles = 5;
-                  break;
-                }
-                default: {
-                  exec_cycles = 5;
-                  break;
-                }
-              }
-              break;
-            }
-            case 15: {
-              switch (opcode & 15) {
-                case 0:
-                // ld_spl_r
-                case 1:
-                case 2:
-                case 3: {
-                  const r = opcode & 3;
-                  _SP = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | _SP & 240;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 4:
-                // ld_r_spl
-                case 5:
-                case 6:
-                case 7: {
-                  const r = opcode & 3;
-                  if (r === 0) {
-                    _A = _SP & 15 & 15;
-                  } else if (r === 1) {
-                    _B = _SP & 15 & 15;
-                  } else if (r === 2) {
-                    _IX < RAM_SIZE ? _RAM[_IX] = _SP & 15 & 15 : set_mem(_IX, _SP & 15);
-                  } else {
-                    _IY < RAM_SIZE ? _RAM[_IY] = _SP & 15 & 15 : set_mem(_IY, _SP & 15);
-                  }
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 8: {
-                  _HALT = 1;
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 9:
-                // dummy
-                case 10: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 11: {
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 5;
-                  break;
-                }
-                case 12:
-                // dummy
-                case 13:
-                case 14: {
-                  exec_cycles = 5;
-                  break;
-                }
-                case 15: {
-                  _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
-                  exec_cycles = 7;
-                  break;
-                }
-              }
-              break;
-            }
-          }
-          break;
+    if (_HALT) {
+      let exec_cycles2 = 7;
+      if (_IF && !_if_delay) {
+        if (_IPT & _EIPT) {
+          exec_cycles2 += _interrupt(12);
+        } else if (_ISIO & _EISIO) {
+          exec_cycles2 += _interrupt(10);
+        } else if (_IK1) {
+          exec_cycles2 += _interrupt(8);
+        } else if (_IK0) {
+          exec_cycles2 += _interrupt(6);
+        } else if (_ISW & _EISW) {
+          exec_cycles2 += _interrupt(4);
+        } else if (_IT & _EIT) {
+          exec_cycles2 += _interrupt(2);
         }
       }
-      _instr_counter += 1;
+      if (!(_CTRL_OSC & IO_CLKCHG)) {
+        _snd_cycle += exec_cycles2;
+        if (_snd_active) {
+          if (_snd_one_shot > 0) {
+            _snd_one_shot -= exec_cycles2;
+            if (_snd_one_shot <= 0) {
+              _tone_generator.stop(_snd_cycle / OSC1_CLOCK);
+            }
+          }
+          if (_snd_envelope > 0) {
+            _snd_envelope -= exec_cycles2;
+            if (_snd_envelope <= 0) {
+              _snd_envelope_step -= 1;
+              _tone_generator.play(
+                _snd_buzzer_freq,
+                false,
+                1 / (8 - _snd_envelope_step),
+                _snd_cycle / OSC1_CLOCK
+              );
+              _snd_envelope = _snd_envelope_cycle;
+            }
+          }
+          _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
+        }
+        if (_ptimer_active) {
+          _ptimer_counter -= exec_cycles2;
+          if (_ptimer_counter <= 0) {
+            _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
+            _process_ptimer();
+          }
+        }
+        _stopwatch_counter -= exec_cycles2;
+        if (_stopwatch_counter <= 0) {
+          _stopwatch_counter += STOPWATCH_CLOCK_DIV;
+          _process_stopwatch();
+        }
+        _timer_counter -= exec_cycles2;
+        if (_timer_counter <= 0) {
+          _timer_counter += TIMER_CLOCK_DIV;
+          _process_timer();
+        }
+      } else {
+        _OSC1_counter -= exec_cycles2;
+        while (_OSC1_counter <= 0) {
+          _OSC1_counter += _OSC1_clock_div;
+          _clock_OSC1();
+        }
+      }
+      return exec_cycles2;
+    }
+    _if_delay = false;
+    const opcode = _ROM_opcodes[_PC];
+    let exec_cycles = 5;
+    switch (opcode >> 8) {
+      case 0: {
+        _PC = _NPC & 7936 | opcode & 255;
+        break;
+      }
+      case 1: {
+        _PC = _NPC = _PC & 4096 | _RAM[_SP + 2] << 8 | _RAM[_SP + 1] << 4 | _RAM[_SP];
+        _SP = _SP + 3 & 255;
+        _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
+        set_mem(_IX & 3840 | _IX + 1 & 255, opcode >> 4 & 15);
+        _IX = _IX & 3840 | _IX + 2 & 255;
+        exec_cycles = 12;
+        break;
+      }
+      case 2: {
+        if (_CF) {
+          _PC = _NPC & 7936 | opcode & 255;
+        } else {
+          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        }
+        break;
+      }
+      case 3: {
+        if (!_CF) {
+          _PC = _NPC & 7936 | opcode & 255;
+        } else {
+          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        }
+        break;
+      }
+      case 4: {
+        _RAM[_SP - 1 & 255] = _PC + 1 >> 8 & 15 & 15;
+        _RAM[_SP - 2 & 255] = _PC + 1 >> 4 & 15 & 15;
+        _SP = _SP - 3 & 255;
+        _RAM[_SP] = _PC + 1 & 15 & 15;
+        _PC = _NPC & 7936 | opcode & 255;
+        exec_cycles = 7;
+        break;
+      }
+      case 5: {
+        _RAM[_SP - 1 & 255] = _PC + 1 >> 8 & 15 & 15;
+        _RAM[_SP - 2 & 255] = _PC + 1 >> 4 & 15 & 15;
+        _SP = _SP - 3 & 255;
+        _RAM[_SP] = _PC + 1 & 15 & 15;
+        _PC = _NPC = _NPC & 4096 | opcode & 255;
+        exec_cycles = 7;
+        break;
+      }
+      case 6: {
+        if (_ZF) {
+          _PC = _NPC & 7936 | opcode & 255;
+        } else {
+          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        }
+        break;
+      }
+      case 7: {
+        if (!_ZF) {
+          _PC = _NPC & 7936 | opcode & 255;
+        } else {
+          _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        }
+        break;
+      }
+      case 8: {
+        _IY = _IY & 3840 | opcode & 255;
+        _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        break;
+      }
+      case 9: {
+        _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
+        set_mem(_IX & 3840 | _IX + 1 & 255, opcode >> 4 & 15);
+        _IX = _IX & 3840 | _IX + 2 & 255;
+        _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        break;
+      }
+      case 10: {
+        switch (opcode >> 4 & 15) {
+          case 0: {
+            const xh = (_IX >> 4 & 15) + (opcode & 15) + _CF;
+            _ZF = (xh & 15) === 0 ? 1 : 0;
+            _CF = xh > 15 ? 1 : 0;
+            _IX = _IX & 3855 | xh << 4 & 240;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 1: {
+            const xl = (_IX & 15) + (opcode & 15) + _CF;
+            _ZF = (xl & 15) === 0 ? 1 : 0;
+            _CF = xl > 15 ? 1 : 0;
+            _IX = _IX & 4080 | xl & 15;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 2: {
+            const yh = (_IY >> 4 & 15) + (opcode & 15) + _CF;
+            _ZF = (yh & 15) === 0 ? 1 : 0;
+            _CF = yh > 15 ? 1 : 0;
+            _IY = _IY & 3855 | yh << 4 & 240;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 3: {
+            const yl = (_IY & 15) + (opcode & 15) + _CF;
+            _ZF = (yl & 15) === 0 ? 1 : 0;
+            _CF = yl > 15 ? 1 : 0;
+            _IY = _IY & 4080 | yl & 15;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 4: {
+            const cp = (_IX >> 4 & 15) - (opcode & 15);
+            _ZF = cp === 0 ? 1 : 0;
+            _CF = cp < 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 5: {
+            const cp = (_IX & 15) - (opcode & 15);
+            _ZF = cp === 0 ? 1 : 0;
+            _CF = cp < 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 6: {
+            const cp = (_IY >> 4 & 15) - (opcode & 15);
+            _ZF = cp === 0 ? 1 : 0;
+            _CF = cp < 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 7: {
+            const cp = (_IY & 15) - (opcode & 15);
+            _ZF = cp === 0 ? 1 : 0;
+            _CF = cp < 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 8: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
+            _CF = res > 15 ? 1 : 0;
+            if (_DF && res > 9) {
+              res += 6;
+              _CF = 1;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 9: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + _CF;
+            _CF = res > 15 ? 1 : 0;
+            if (_DF && res > 9) {
+              res += 6;
+              _CF = 1;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 10: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
+            _CF = res < 0 ? 1 : 0;
+            if (_DF && res < 0) {
+              res += 10;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 11: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - _CF;
+            _CF = res < 0 ? 1 : 0;
+            if (_DF && res < 0) {
+              res += 10;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 12: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
+            _ZF = res === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15;
+            } else if (r === 1) {
+              _B = res & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 13: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
+            _ZF = res === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15;
+            } else if (r === 1) {
+              _B = res & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 14: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) ^ (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
+            _ZF = res === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15;
+            } else if (r === 1) {
+              _B = res & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 15: {
+            const r = opcode & 3;
+            const res = ((r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 1) + _CF;
+            _CF = res > 15 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+        }
+        break;
+      }
+      case 11: {
+        _IX = _IX & 3840 | opcode & 255;
+        _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+        break;
+      }
+      case 12: {
+        switch (opcode >> 6 & 3) {
+          case 0: {
+            const r = opcode >> 4 & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (opcode & 15);
+            _CF = res > 15 ? 1 : 0;
+            if (_DF && res > 9) {
+              res += 6;
+              _CF = 1;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 1: {
+            const r = opcode >> 4 & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (opcode & 15) + _CF;
+            _CF = res > 15 ? 1 : 0;
+            if (_DF && res > 9) {
+              res += 6;
+              _CF = 1;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 2: {
+            const r = opcode >> 4 & 3;
+            const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & opcode & 15;
+            _ZF = res === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15;
+            } else if (r === 1) {
+              _B = res & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 3: {
+            const r = opcode >> 4 & 3;
+            const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | opcode & 15;
+            _ZF = res === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15;
+            } else if (r === 1) {
+              _B = res & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+        }
+        break;
+      }
+      case 13: {
+        switch (opcode >> 6 & 3) {
+          case 0: {
+            const r = opcode >> 4 & 3;
+            const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) ^ opcode & 15;
+            _ZF = res === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15;
+            } else if (r === 1) {
+              _B = res & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 : set_mem(_IX, res);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 : set_mem(_IY, res);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 1: {
+            const r = opcode >> 4 & 3;
+            let res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (opcode & 15) - _CF;
+            _CF = res < 0 ? 1 : 0;
+            if (_DF && _CF) {
+              res += 10;
+            }
+            _ZF = (res & 15) === 0 ? 1 : 0;
+            if (r === 0) {
+              _A = res & 15 & 15;
+            } else if (r === 1) {
+              _B = res & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 2: {
+            const r = opcode >> 4 & 3;
+            _ZF = ((r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & opcode & 15) === 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 3: {
+            const r = opcode >> 4 & 3;
+            const cp = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (opcode & 15);
+            _ZF = cp === 0 ? 1 : 0;
+            _CF = cp < 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+        }
+        break;
+      }
+      case 14: {
+        switch (opcode >> 6 & 3) {
+          case 0: {
+            const r = opcode >> 4 & 3;
+            if (r === 0) {
+              _A = opcode & 15 & 15;
+            } else if (r === 1) {
+              _B = opcode & 15 & 15;
+            } else if (r === 2) {
+              _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
+            } else {
+              _IY < RAM_SIZE ? _RAM[_IY] = opcode & 15 & 15 : set_mem(_IY, opcode & 15);
+            }
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            break;
+          }
+          case 1: {
+            switch (opcode >> 4 & 3) {
+              case 0:
+              // pset_p
+              case 1: {
+                _if_delay = true;
+                _NPC = opcode << 8 & 7936;
+                _PC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 2: {
+                _IX < RAM_SIZE ? _RAM[_IX] = opcode & 15 & 15 : set_mem(_IX, opcode & 15);
+                _IX = _IX & 3840 | _IX + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 3: {
+                _IY < RAM_SIZE ? _RAM[_IY] = opcode & 15 & 15 : set_mem(_IY, opcode & 15);
+                _IY = _IY & 3840 | _IY + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+            }
+            break;
+          }
+          case 2: {
+            switch (opcode >> 2 & 15) {
+              case 0: {
+                const r = opcode & 3;
+                _IX = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 8 | _IX & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 1: {
+                const r = opcode & 3;
+                _IX = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 4 | _IX & 3855;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 2: {
+                const r = opcode & 3;
+                _IX = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | _IX & 4080;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 3: {
+                const r = opcode & 3;
+                const res = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (_CF << 4);
+                _CF = res & 1;
+                if (r === 0) {
+                  _A = res >> 1 & 15;
+                } else if (r === 1) {
+                  _B = res >> 1 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = res >> 1 & 15 : set_mem(_IX, res >> 1);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = res >> 1 & 15 : set_mem(_IY, res >> 1);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 4: {
+                const r = opcode & 3;
+                _IY = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 8 | _IY & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 5: {
+                const r = opcode & 3;
+                _IY = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 4 | _IY & 3855;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 6: {
+                const r = opcode & 3;
+                _IY = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | _IY & 4080;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 7:
+              // dummy
+              case 11:
+              // dummy
+              case 15: {
+                break;
+              }
+              case 8: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _IX >> 8 & 15;
+                } else if (r === 1) {
+                  _B = _IX >> 8 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _IX >> 8 & 15 : set_mem(_IX, _IX >> 8);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _IX >> 8 & 15 : set_mem(_IY, _IX >> 8);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 9: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _IX >> 4 & 15 & 15;
+                } else if (r === 1) {
+                  _B = _IX >> 4 & 15 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _IX >> 4 & 15 & 15 : set_mem(_IX, _IX >> 4 & 15);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _IX >> 4 & 15 & 15 : set_mem(_IY, _IX >> 4 & 15);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 10: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _IX & 15 & 15;
+                } else if (r === 1) {
+                  _B = _IX & 15 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _IX & 15 & 15 : set_mem(_IX, _IX & 15);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _IX & 15 & 15 : set_mem(_IY, _IX & 15);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 12: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _IY >> 8 & 15;
+                } else if (r === 1) {
+                  _B = _IY >> 8 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _IY >> 8 & 15 : set_mem(_IX, _IY >> 8);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _IY >> 8 & 15 : set_mem(_IY, _IY >> 8);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 13: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _IY >> 4 & 15 & 15;
+                } else if (r === 1) {
+                  _B = _IY >> 4 & 15 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _IY >> 4 & 15 & 15 : set_mem(_IX, _IY >> 4 & 15);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _IY >> 4 & 15 & 15 : set_mem(_IY, _IY >> 4 & 15);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 14: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _IY & 15 & 15;
+                } else if (r === 1) {
+                  _B = _IY & 15 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _IY & 15 & 15 : set_mem(_IX, _IY & 15);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _IY & 15 & 15 : set_mem(_IY, _IY & 15);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+            }
+            break;
+          }
+          case 3: {
+            switch (opcode >> 4 & 3) {
+              case 0: {
+                const r = opcode >> 2 & 3;
+                const q = opcode & 3;
+                if (r === 0) {
+                  _A = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
+                } else if (r === 1) {
+                  _B = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
+                } else if (r === 2) {
+                  set_mem(
+                    _IX,
+                    q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                  );
+                } else {
+                  set_mem(
+                    _IY,
+                    q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                  );
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 1: {
+                break;
+              }
+              case 2: {
+                const r = opcode >> 2 & 3;
+                const q = opcode & 3;
+                if (r === 0) {
+                  _A = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
+                } else if (r === 1) {
+                  _B = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
+                } else if (r === 2) {
+                  set_mem(
+                    _IX,
+                    q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                  );
+                } else {
+                  set_mem(
+                    _IY,
+                    q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                  );
+                }
+                _IX = _IX & 3840 | _IX + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 3: {
+                const r = opcode >> 2 & 3;
+                const q = opcode & 3;
+                if (r === 0) {
+                  _A = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
+                } else if (r === 1) {
+                  _B = (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & 15;
+                } else if (r === 2) {
+                  set_mem(
+                    _IX,
+                    q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                  );
+                } else {
+                  set_mem(
+                    _IY,
+                    q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                  );
+                }
+                _IY = _IY & 3840 | _IY + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case 15: {
+        switch (opcode >> 4 & 15) {
+          case 0: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            const cp = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY));
+            _ZF = cp === 0 ? 1 : 0;
+            _CF = cp < 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 1: {
+            const r = opcode >> 2 & 3;
+            const q = opcode & 3;
+            _ZF = ((r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) & (q === 0 ? _A : q === 1 ? _B : q === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY))) === 0 ? 1 : 0;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 2: {
+            switch (opcode >> 2 & 3) {
+              case 0:
+              // dummy
+              case 1: {
+                break;
+              }
+              case 2: {
+                const r = opcode & 3;
+                let res = (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) + (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + _CF;
+                _CF = res > 15 ? 1 : 0;
+                if (_DF && res > 9) {
+                  res += 6;
+                  _CF = 1;
+                }
+                _ZF = res & false ? 1 : 0;
+                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+                _IX = _IX & 3840 | _IX + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                exec_cycles = 7;
+                break;
+              }
+              case 3: {
+                const r = opcode & 3;
+                let res = (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) + _CF;
+                _CF = res > 15 ? 1 : 0;
+                if (_DF && res > 9) {
+                  res += 6;
+                  _CF = 1;
+                }
+                _ZF = res & false ? 1 : 0;
+                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+                _IY = _IY & 3840 | _IY + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                exec_cycles = 7;
+                break;
+              }
+            }
+            break;
+          }
+          case 3: {
+            switch (opcode >> 2 & 3) {
+              case 0:
+              // dummy
+              case 1: {
+                break;
+              }
+              case 2: {
+                const r = opcode & 3;
+                let res = (_IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX)) - (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - _CF;
+                _CF = res < 0 ? 1 : 0;
+                if (_DF && res < 0) {
+                  res += 10;
+                }
+                _ZF = res & false ? 1 : 0;
+                _IX < RAM_SIZE ? _RAM[_IX] = res & 15 & 15 : set_mem(_IX, res & 15);
+                _IX = _IX & 3840 | _IX + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                exec_cycles = 7;
+                break;
+              }
+              case 3: {
+                const r = opcode & 3;
+                let res = (_IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) - _CF;
+                _CF = res < 0 ? 1 : 0;
+                if (_DF && res < 0) {
+                  res += 10;
+                }
+                _ZF = res & false ? 1 : 0;
+                _IY < RAM_SIZE ? _RAM[_IY] = res & 15 & 15 : set_mem(_IY, res & 15);
+                _IY = _IY & 3840 | _IY + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                exec_cycles = 7;
+                break;
+              }
+            }
+            break;
+          }
+          case 4: {
+            _CF |= opcode & 1;
+            _ZF |= opcode >> 1 & 1;
+            _DF |= opcode >> 2 & 1;
+            const new_IF = opcode >> 3 & 1;
+            _if_delay = new_IF && !_IF;
+            _IF |= new_IF;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 5: {
+            _CF &= opcode;
+            _ZF &= opcode >> 1;
+            _DF &= opcode >> 2;
+            _IF &= opcode >> 3;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 6: {
+            const mn = opcode & 15;
+            const res = _RAM[mn] + 1;
+            _ZF = res === 16 ? 1 : 0;
+            _CF = res > 15 ? 1 : 0;
+            _RAM[mn] = res & 15 & 15;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 7: {
+            const mn = opcode & 15;
+            const res = _RAM[mn] - 1;
+            _ZF = res === 0 ? 1 : 0;
+            _CF = res < 0 ? 1 : 0;
+            _RAM[mn] = res & 15 & 15;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            exec_cycles = 7;
+            break;
+          }
+          case 8: {
+            _RAM[opcode & 15] = _A & 15 & 15;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            break;
+          }
+          case 9: {
+            _RAM[opcode & 15] = _B & 15 & 15;
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            break;
+          }
+          case 10: {
+            _A = _RAM[opcode & 15];
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            break;
+          }
+          case 11: {
+            _B = _RAM[opcode & 15];
+            _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+            break;
+          }
+          case 12: {
+            switch (opcode & 15) {
+              case 0:
+              // push_r
+              case 1:
+              case 2:
+              case 3: {
+                const r = opcode & 3;
+                _SP = _SP - 1 & 255;
+                set_mem(
+                  _SP,
+                  r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)
+                );
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 4: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = _IX >> 8 & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 5: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = _IX >> 4 & 15 & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 6: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = _IX & 15 & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 7: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = _IY >> 8 & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 8: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = _IY >> 4 & 15 & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 9: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = _IY & 15 & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 10: {
+                _SP = _SP - 1 & 255;
+                _RAM[_SP] = (_IF << 3 | _DF << 2 | _ZF << 1 | _CF) & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 11: {
+                _SP = _SP - 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              default: {
+                break;
+              }
+            }
+            break;
+          }
+          case 13: {
+            switch (opcode & 15) {
+              case 0:
+              // pop_r
+              case 1:
+              case 2:
+              case 3: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _RAM[_SP] & 15;
+                } else if (r === 1) {
+                  _B = _RAM[_SP] & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _RAM[_SP] & 15 : set_mem(_IX, _RAM[_SP]);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _RAM[_SP] & 15 : set_mem(_IY, _RAM[_SP]);
+                }
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 4: {
+                _IX = _RAM[_SP] << 8 | _IX & 255;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 5: {
+                _IX = _RAM[_SP] << 4 | _IX & 3855;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 6: {
+                _IX = _RAM[_SP] | _IX & 4080;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 7: {
+                _IY = _RAM[_SP] << 8 | _IY & 255;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 8: {
+                _IY = _RAM[_SP] << 4 | _IY & 3855;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 9: {
+                _IY = _RAM[_SP] | _IY & 4080;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 10: {
+                const f = _RAM[_SP];
+                _CF = f & 1;
+                _ZF = f >> 1 & 1;
+                _DF = f >> 2 & 1;
+                const new_IF = f >> 3 & 1;
+                _if_delay = new_IF && !_IF;
+                _IF = new_IF;
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 11: {
+                _SP = _SP + 1 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 12:
+              // dummy
+              case 13: {
+                break;
+              }
+              case 14: {
+                _PC = _PC & 4096 | _RAM[_SP] | _RAM[_SP + 1] << 4 | _RAM[_SP + 2] << 8;
+                _SP = _SP + 3 & 255;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                exec_cycles = 12;
+                break;
+              }
+              case 15: {
+                _PC = _NPC = _PC & 4096 | _RAM[_SP] | _RAM[_SP + 1] << 4 | _RAM[_SP + 2] << 8;
+                _SP = _SP + 3 & 255;
+                exec_cycles = 7;
+                break;
+              }
+            }
+            break;
+          }
+          case 14: {
+            switch (opcode & 15) {
+              case 0:
+              // ld_sph_r
+              case 1:
+              case 2:
+              case 3: {
+                const r = opcode & 3;
+                _SP = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) << 4 | _SP & 15;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 4:
+              // ld_r_sph
+              case 5:
+              case 6:
+              case 7: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _SP >> 4 & 15;
+                } else if (r === 1) {
+                  _B = _SP >> 4 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _SP >> 4 & 15 : set_mem(_IX, _SP >> 4);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _SP >> 4 & 15 : set_mem(_IY, _SP >> 4);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 8: {
+                _PC = _NPC & 7936 | _B << 4 | _A;
+                break;
+              }
+              default: {
+                break;
+              }
+            }
+            break;
+          }
+          case 15: {
+            switch (opcode & 15) {
+              case 0:
+              // ld_spl_r
+              case 1:
+              case 2:
+              case 3: {
+                const r = opcode & 3;
+                _SP = (r === 0 ? _A : r === 1 ? _B : r === 2 ? _IX < RAM_SIZE ? _RAM[_IX] : get_mem(_IX) : _IY < RAM_SIZE ? _RAM[_IY] : get_mem(_IY)) | _SP & 240;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 4:
+              // ld_r_spl
+              case 5:
+              case 6:
+              case 7: {
+                const r = opcode & 3;
+                if (r === 0) {
+                  _A = _SP & 15 & 15;
+                } else if (r === 1) {
+                  _B = _SP & 15 & 15;
+                } else if (r === 2) {
+                  _IX < RAM_SIZE ? _RAM[_IX] = _SP & 15 & 15 : set_mem(_IX, _SP & 15);
+                } else {
+                  _IY < RAM_SIZE ? _RAM[_IY] = _SP & 15 & 15 : set_mem(_IY, _SP & 15);
+                }
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 8: {
+                _HALT = 1;
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 9:
+              // dummy
+              case 10: {
+                break;
+              }
+              case 11: {
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                break;
+              }
+              case 12:
+              // dummy
+              case 13:
+              case 14: {
+                break;
+              }
+              case 15: {
+                _PC = _NPC = _PC & 4096 | _PC + 1 & 4095;
+                exec_cycles = 7;
+                break;
+              }
+            }
+            break;
+          }
+        }
+        break;
+      }
     }
     if (_IF && !_if_delay) {
       if (_IPT & _EIPT) {
