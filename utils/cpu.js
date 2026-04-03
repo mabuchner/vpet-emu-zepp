@@ -292,6 +292,8 @@ let _CTRL_SW = 0;
 let _CTRL_PT = 0;
 let _PTC = 0;
 let _ptimer_active = false;
+let _stopwatch_active = false;
+let _clkchg_active = false;
 
 let _IOC = 0;
 let _PUP = 0;
@@ -361,6 +363,8 @@ function _initRegisters() {
   _CTRL_PT = 0;
   _PTC = 0;
   _ptimer_active = false;
+  _stopwatch_active = false;
+  _clkchg_active = false;
   _IOC = 0;
   _PUP = 0;
 }
@@ -688,6 +692,7 @@ function set_mem(addr, value) {
       }
       case 0x70:
         _CTRL_OSC = value;
+        _clkchg_active = (_CTRL_OSC & IO_CLKCHG) !== 0;
         break;
       case 0x71:
         _CTRL_LCD = value;
@@ -729,6 +734,7 @@ function set_mem(addr, value) {
           _SWL = _SWH = 0;
         }
         _CTRL_SW = value & IO_SWRUN;
+        _stopwatch_active = (_CTRL_SW & IO_SWRUN) !== 0;
         break;
       }
       case 0x78: {
@@ -851,7 +857,7 @@ function _clock() {
       }
     }
 
-    if (!(_CTRL_OSC & IO_CLKCHG)) {
+    if (!_clkchg_active) {
       // Normal mode: exec_cycles == number of OSC1 ticks elapsed.
       // Batch all counter updates instead of calling _clock_OSC1() exec_cycles times.
       _snd_cycle += exec_cycles;
@@ -2975,7 +2981,7 @@ function _clock() {
     }
   }
 
-  if (!(_CTRL_OSC & IO_CLKCHG)) {
+  if (!_clkchg_active) {
     // Normal mode: exec_cycles == number of OSC1 ticks elapsed.
     // Batch all counter updates instead of calling _clock_OSC1() exec_cycles times.
     _snd_cycle += exec_cycles;
@@ -3010,10 +3016,12 @@ function _clock() {
       }
     }
 
-    _stopwatch_counter -= exec_cycles;
-    if (_stopwatch_counter <= 0) {
-      _stopwatch_counter += STOPWATCH_CLOCK_DIV;
-      _process_stopwatch();
+    if (_stopwatch_active) {
+      _stopwatch_counter -= exec_cycles;
+      if (_stopwatch_counter <= 0) {
+        _stopwatch_counter += STOPWATCH_CLOCK_DIV;
+        _process_stopwatch();
+      }
     }
 
     _timer_counter -= exec_cycles;
@@ -3295,7 +3303,7 @@ export class CPU {
         const skip =
           Math.min(
             _timer_counter,
-            _stopwatch_counter,
+            _stopwatch_active ? _stopwatch_counter : 2147483647,
             has_ptimer ? _ptimer_counter : 2147483647,
           ) - 1;
         if (skip > 7) {

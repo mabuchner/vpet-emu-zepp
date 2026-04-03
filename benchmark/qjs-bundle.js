@@ -171,6 +171,8 @@
   var _CTRL_PT = 0;
   var _PTC = 0;
   var _ptimer_active = false;
+  var _stopwatch_active = false;
+  var _clkchg_active = false;
   var _IOC = 0;
   var _PUP = 0;
   function _initRegisters() {
@@ -232,6 +234,8 @@
     _CTRL_PT = 0;
     _PTC = 0;
     _ptimer_active = false;
+    _stopwatch_active = false;
+    _clkchg_active = false;
     _IOC = 0;
     _PUP = 0;
   }
@@ -544,6 +548,7 @@
         }
         case 112:
           _CTRL_OSC = value;
+          _clkchg_active = (_CTRL_OSC & IO_CLKCHG) !== 0;
           break;
         case 113:
           _CTRL_LCD = value;
@@ -585,6 +590,7 @@
             _SWL = _SWH = 0;
           }
           _CTRL_SW = value & IO_SWRUN;
+          _stopwatch_active = (_CTRL_SW & IO_SWRUN) !== 0;
           break;
         }
         case 120: {
@@ -694,7 +700,7 @@
           exec_cycles2 += _interrupt(2);
         }
       }
-      if (!(_CTRL_OSC & IO_CLKCHG)) {
+      if (!_clkchg_active) {
         _snd_cycle += exec_cycles2;
         if (_snd_active) {
           if (_snd_one_shot > 0) {
@@ -1908,7 +1914,7 @@
         exec_cycles += _interrupt(2);
       }
     }
-    if (!(_CTRL_OSC & IO_CLKCHG)) {
+    if (!_clkchg_active) {
       _snd_cycle += exec_cycles;
       if (_snd_active) {
         if (_snd_one_shot > 0) {
@@ -1939,10 +1945,12 @@
           _process_ptimer();
         }
       }
-      _stopwatch_counter -= exec_cycles;
-      if (_stopwatch_counter <= 0) {
-        _stopwatch_counter += STOPWATCH_CLOCK_DIV;
-        _process_stopwatch();
+      if (_stopwatch_active) {
+        _stopwatch_counter -= exec_cycles;
+        if (_stopwatch_counter <= 0) {
+          _stopwatch_counter += STOPWATCH_CLOCK_DIV;
+          _process_stopwatch();
+        }
       }
       _timer_counter -= exec_cycles;
       if (_timer_counter <= 0) {
@@ -2172,7 +2180,7 @@
           const has_ptimer = _ptimer_active;
           const skip = Math.min(
             _timer_counter,
-            _stopwatch_counter,
+            _stopwatch_active ? _stopwatch_counter : 2147483647,
             has_ptimer ? _ptimer_counter : 2147483647
           ) - 1;
           if (skip > 7) {
