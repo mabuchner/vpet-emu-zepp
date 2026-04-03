@@ -15,6 +15,42 @@ ES modules). Watch results are the authoritative signal.
 
 ---
 
+## Mac Benchmark
+
+The Mac benchmark (`benchmark/qjs-bench.mjs`) exercises several subsystems
+in isolation — `ROM.getWord()`, `CPU.get_mem()` / `CPU.set_mem()`, the full
+`CPU.clock()` loop, and the display VRAM packing step. The `clock()` figures
+are the primary comparison point and are reported throughout this document.
+
+The benchmark uses a synthetic ROM filled with a single repeating opcode
+(either a tight `JP` loop or a `NOP5`) so that the measured cost is
+representative of the hot instruction-dispatch path rather than any
+particular ROM workload.
+
+**Building the bundle:**
+
+```
+npx esbuild benchmark/qjs-bench.mjs \
+  --bundle --format=iife --platform=neutral \
+  --outfile=benchmark/qjs-bundle.js
+```
+
+esbuild bundles the ES-module source and all its imports into a single
+self-contained IIFE that QuickJS can execute without a module loader.
+
+**Running the benchmark:**
+
+```
+qjs benchmark/qjs-bundle.js
+```
+
+`qjs` is the QuickJS command-line interpreter. The benchmark runs a 200 ms
+warm-up followed by a 2 000 ms timed window for each case, calling each
+function in inner batches of 100–1 000 to amortise `Date.now()` overhead.
+It prints ops/s and µs/op for each case.
+
+---
+
 ## Baseline
 
 | Metric | Value |
