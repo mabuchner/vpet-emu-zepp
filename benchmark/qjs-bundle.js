@@ -18,7 +18,7 @@
   var SND_ONE_SHOT_DIV = [8 * 128, 16 * 128];
   var SND_ENVELOPE_CYCLE_DIV = [16 * 128, 32 * 128];
   var TIMER_CLOCK_DIV = OSC1_CLOCK / 256;
-  var STOPWATCH_CLOCK_DIV = OSC1_CLOCK / 100;
+  var STOPWATCH_CLOCK_DIV = Math.round(OSC1_CLOCK / 100);
   var PTIMER_CLOCK_DIV = new Uint8Array([
     0,
     0,
@@ -170,6 +170,7 @@
   var _CTRL_SW = 0;
   var _CTRL_PT = 0;
   var _PTC = 0;
+  var _ptimer_active = false;
   var _IOC = 0;
   var _PUP = 0;
   function _initRegisters() {
@@ -230,6 +231,7 @@
     _CTRL_SW = 0;
     _CTRL_PT = 0;
     _PTC = 0;
+    _ptimer_active = false;
     _IOC = 0;
     _PUP = 0;
   }
@@ -257,7 +259,7 @@
       }
       _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
     }
-    if ((_PTC & IO_PTC) > 1) {
+    if (_ptimer_active) {
       _ptimer_counter -= 1;
       if (_ptimer_counter <= 0) {
         _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
@@ -594,6 +596,7 @@
         }
         case 121:
           _PTC = value;
+          _ptimer_active = (_PTC & IO_PTC) > 1;
           break;
         case 125: {
           _IOC = value;
@@ -1931,7 +1934,7 @@
         }
         _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
       }
-      if ((_PTC & IO_PTC) > 1) {
+      if (_ptimer_active) {
         _ptimer_counter -= exec_cycles;
         if (_ptimer_counter <= 0) {
           _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
@@ -2168,7 +2171,7 @@
     clockBatch(n) {
       for (let i = 0; i < n; i += 1) {
         if (_HALT && !_RESET && (!_IF || _if_delay || !(_IPT & _EIPT) && !(_ISIO & _EISIO) && !_IK1 && !_IK0 && !(_ISW & _EISW) && !(_IT & _EIT))) {
-          const has_ptimer = (_PTC & IO_PTC) > 1;
+          const has_ptimer = _ptimer_active;
           const skip = Math.min(
             _timer_counter,
             _stopwatch_counter,

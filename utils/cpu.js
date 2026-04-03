@@ -3,7 +3,7 @@ const SND_BUZZER_FREQ_DIV = [8, 10, 12, 14, 16, 20, 24, 28];
 const SND_ONE_SHOT_DIV = [8 * 128, 16 * 128];
 const SND_ENVELOPE_CYCLE_DIV = [16 * 128, 32 * 128];
 const TIMER_CLOCK_DIV = OSC1_CLOCK / 256;
-const STOPWATCH_CLOCK_DIV = OSC1_CLOCK / 100;
+const STOPWATCH_CLOCK_DIV = Math.round(OSC1_CLOCK / 100);
 const PTIMER_CLOCK_DIV = new Uint8Array([
   0,
   0,
@@ -291,6 +291,7 @@ let _CTRL_BZ2 = 0;
 let _CTRL_SW = 0;
 let _CTRL_PT = 0;
 let _PTC = 0;
+let _ptimer_active = false;
 
 let _IOC = 0;
 let _PUP = 0;
@@ -359,6 +360,7 @@ function _initRegisters() {
   _CTRL_SW = 0;
   _CTRL_PT = 0;
   _PTC = 0;
+  _ptimer_active = false;
   _IOC = 0;
   _PUP = 0;
 }
@@ -388,7 +390,7 @@ function _clock_OSC1() {
     _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
   }
 
-  if ((_PTC & IO_PTC) > 1) {
+  if (_ptimer_active) {
     _ptimer_counter -= 1;
     if (_ptimer_counter <= 0) {
       _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
@@ -738,6 +740,7 @@ function set_mem(addr, value) {
       }
       case 0x79:
         _PTC = value;
+        _ptimer_active = (_PTC & IO_PTC) > 1;
         break;
       case 0x7d: {
         _IOC = value;
@@ -2991,7 +2994,7 @@ function _clock() {
       _snd_active = _snd_one_shot > 0 || _snd_envelope > 0;
     }
 
-    if ((_PTC & IO_PTC) > 1) {
+    if (_ptimer_active) {
       _ptimer_counter -= exec_cycles;
       if (_ptimer_counter <= 0) {
         _ptimer_counter += PTIMER_CLOCK_DIV[_PTC & IO_PTC];
@@ -3280,7 +3283,7 @@ export class CPU {
             !(_ISW & _EISW) &&
             !(_IT & _EIT)))
       ) {
-        const has_ptimer = (_PTC & IO_PTC) > 1;
+        const has_ptimer = _ptimer_active;
         const skip =
           Math.min(
             _timer_counter,
