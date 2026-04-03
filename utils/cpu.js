@@ -457,10 +457,10 @@ function _process_timer() {
 }
 
 function _interrupt(vector) {
-  _RAM[(_SP - 1) & 0xff] = (_PC >> 8) & 0x0f & 0xf;
-  _RAM[(_SP - 2) & 0xff] = (_PC >> 4) & 0x0f & 0xf;
+  _RAM[(_SP - 1) & 0xff] = (_PC >> 8) & 0xf;
+  _RAM[(_SP - 2) & 0xff] = (_PC >> 4) & 0xf;
   _SP = (_SP - 3) & 0xff;
-  _RAM[_SP] = _PC & 0x0f & 0xf;
+  _RAM[_SP] = _PC & 0xf;
   _IF = 0;
   _HALT = 0;
   _PC = _NPC = (_NPC & 0x1000) | 0x0100 | vector;
@@ -936,10 +936,8 @@ function _clock() {
         (_RAM[_SP + 1] << 4) |
         _RAM[_SP];
       _SP = (_SP + 3) & 0xff;
-      _IX < RAM_SIZE
-        ? (_RAM[_IX] = opcode & 0x00f & 0xf)
-        : set_mem(_IX, opcode & 0x00f);
-      set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0x00f);
+      _IX < RAM_SIZE ? (_RAM[_IX] = opcode & 0xf) : set_mem(_IX, opcode & 0xf);
+      set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0xf);
       _IX = (_IX & 0xf00) | ((_IX + 2) & 0xff);
       exec_cycles = 12;
       break;
@@ -967,10 +965,10 @@ function _clock() {
     case 0x4: {
       // call_s
       // M(SP-1)←PCP, M(SP-2)←PCSH, M(SP-3)←PCSL+1 SP←SP-3, PCP←NPP, PCS←s7~s0
-      _RAM[(_SP - 1) & 0xff] = ((_PC + 1) >> 8) & 0x0f & 0xf;
-      _RAM[(_SP - 2) & 0xff] = ((_PC + 1) >> 4) & 0x0f & 0xf;
+      _RAM[(_SP - 1) & 0xff] = ((_PC + 1) >> 8) & 0xf;
+      _RAM[(_SP - 2) & 0xff] = ((_PC + 1) >> 4) & 0xf;
       _SP = (_SP - 3) & 0xff;
-      _RAM[_SP] = (_PC + 1) & 0x0f & 0xf;
+      _RAM[_SP] = (_PC + 1) & 0xf;
       _PC = (_NPC & 0x1f00) | (opcode & 0x0ff);
       exec_cycles = 7;
       break;
@@ -978,10 +976,10 @@ function _clock() {
     case 0x5: {
       // calz_s
       // M(SP-1)←PCP, M(SP-2)←PCSH, M(SP-3)←PCSL+1 SP←SP-3, PCP←0, PCS←s7~s0
-      _RAM[(_SP - 1) & 0xff] = ((_PC + 1) >> 8) & 0x0f & 0xf;
-      _RAM[(_SP - 2) & 0xff] = ((_PC + 1) >> 4) & 0x0f & 0xf;
+      _RAM[(_SP - 1) & 0xff] = ((_PC + 1) >> 8) & 0xf;
+      _RAM[(_SP - 2) & 0xff] = ((_PC + 1) >> 4) & 0xf;
       _SP = (_SP - 3) & 0xff;
-      _RAM[_SP] = (_PC + 1) & 0x0f & 0xf;
+      _RAM[_SP] = (_PC + 1) & 0xf;
       _PC = _NPC = (_NPC & 0x1000) | (opcode & 0x0ff);
       exec_cycles = 7;
       break;
@@ -1016,10 +1014,8 @@ function _clock() {
     case 0x9: {
       // lbpx_mx_l
       // M(X)←l3~l0, M(X+1)←l7~l4, X←X+2
-      _IX < RAM_SIZE
-        ? (_RAM[_IX] = opcode & 0x00f & 0xf)
-        : set_mem(_IX, opcode & 0x00f);
-      set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0x00f);
+      _IX < RAM_SIZE ? (_RAM[_IX] = opcode & 0xf) : set_mem(_IX, opcode & 0xf);
+      set_mem((_IX & 0xf00) | ((_IX + 1) & 0xff), (opcode >> 4) & 0xf);
       _IX = (_IX & 0xf00) | ((_IX + 2) & 0xff);
       _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
       break;
@@ -1029,7 +1025,7 @@ function _clock() {
         case 0x0: {
           // adc_xh_i
           // XH←XH+i3~i0+C
-          const xh = ((_IX >> 4) & 0x00f) + (opcode & 0x00f) + _CF;
+          const xh = ((_IX >> 4) & 0xf) + (opcode & 0xf) + _CF;
           _ZF = (xh & 0xf) === 0 ? 1 : 0;
           _CF = xh > 15 ? 1 : 0;
           _IX = (_IX & 0xf0f) | ((xh << 4) & 0x0f0);
@@ -1040,10 +1036,10 @@ function _clock() {
         case 0x1: {
           // adc_xl_i
           // XL←XL+i3~i0+C
-          const xl = (_IX & 0x00f) + (opcode & 0x00f) + _CF;
+          const xl = (_IX & 0xf) + (opcode & 0xf) + _CF;
           _ZF = (xl & 0xf) === 0 ? 1 : 0;
           _CF = xl > 15 ? 1 : 0;
-          _IX = (_IX & 0xff0) | (xl & 0x00f);
+          _IX = (_IX & 0xff0) | (xl & 0xf);
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
           break;
@@ -1051,7 +1047,7 @@ function _clock() {
         case 0x2: {
           // adc_yh_i
           // YH←YH+i3~i0+C
-          const yh = ((_IY >> 4) & 0x00f) + (opcode & 0x00f) + _CF;
+          const yh = ((_IY >> 4) & 0xf) + (opcode & 0xf) + _CF;
           _ZF = (yh & 0xf) === 0 ? 1 : 0;
           _CF = yh > 15 ? 1 : 0;
           _IY = (_IY & 0xf0f) | ((yh << 4) & 0x0f0);
@@ -1062,10 +1058,10 @@ function _clock() {
         case 0x3: {
           // adc_yl_i
           // YL←YL+i3~i0+C
-          const yl = (_IY & 0x00f) + (opcode & 0x00f) + _CF;
+          const yl = (_IY & 0xf) + (opcode & 0xf) + _CF;
           _ZF = (yl & 0xf) === 0 ? 1 : 0;
           _CF = yl > 15 ? 1 : 0;
-          _IY = (_IY & 0xff0) | (yl & 0x00f);
+          _IY = (_IY & 0xff0) | (yl & 0xf);
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
           break;
@@ -1073,7 +1069,7 @@ function _clock() {
         case 0x4: {
           // cp_xh_i
           // XH-i3~i0
-          const cp = ((_IX >> 4) & 0x00f) - (opcode & 0x00f);
+          const cp = ((_IX >> 4) & 0xf) - (opcode & 0xf);
           _ZF = cp === 0 ? 1 : 0;
           _CF = cp < 0 ? 1 : 0;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1083,7 +1079,7 @@ function _clock() {
         case 0x5: {
           // cp_xl_i
           // XL-i3~i0
-          const cp = (_IX & 0x00f) - (opcode & 0x00f);
+          const cp = (_IX & 0xf) - (opcode & 0xf);
           _ZF = cp === 0 ? 1 : 0;
           _CF = cp < 0 ? 1 : 0;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1093,7 +1089,7 @@ function _clock() {
         case 0x6: {
           // cp_yh_i
           // YH-i3~i0
-          const cp = ((_IY >> 4) & 0x00f) - (opcode & 0x00f);
+          const cp = ((_IY >> 4) & 0xf) - (opcode & 0xf);
           _ZF = cp === 0 ? 1 : 0;
           _CF = cp < 0 ? 1 : 0;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1103,7 +1099,7 @@ function _clock() {
         case 0x7: {
           // cp_yl_i
           // YL-i3~i0
-          const cp = (_IY & 0x00f) - (opcode & 0x00f);
+          const cp = (_IY & 0xf) - (opcode & 0xf);
           _ZF = cp === 0 ? 1 : 0;
           _CF = cp < 0 ? 1 : 0;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1138,24 +1134,20 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY));
-          _CF = res > 15 ? 1 : 0;
+          _CF = (res > 15) | 0;
           if (_DF && res > 9) {
             res += 6;
             _CF = 1;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1190,24 +1182,20 @@ function _clock() {
                     ? _RAM[_IY]
                     : get_mem(_IY)) +
             _CF;
-          _CF = res > 15 ? 1 : 0;
+          _CF = (res > 15) | 0;
           if (_DF && res > 9) {
             res += 6;
             _CF = 1;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1241,23 +1229,19 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY));
-          _CF = res < 0 ? 1 : 0;
+          _CF = (res < 0) | 0;
           if (_DF && res < 0) {
             res += 10;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1292,23 +1276,19 @@ function _clock() {
                     ? _RAM[_IY]
                     : get_mem(_IY)) -
             _CF;
-          _CF = res < 0 ? 1 : 0;
+          _CF = (res < 0) | 0;
           if (_DF && res < 0) {
             res += 10;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1458,19 +1438,15 @@ function _clock() {
                     : get_mem(_IY)) <<
               1) +
             _CF;
-          _CF = res > 15 ? 1 : 0;
+          _CF = (res > 15) | 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1504,25 +1480,21 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY)) +
-            (opcode & 0x00f);
-          _CF = res > 15 ? 1 : 0;
+            (opcode & 0xf);
+          _CF = (res > 15) | 0;
           if (_DF && res > 9) {
             res += 6;
             _CF = 1;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1544,26 +1516,22 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY)) +
-            (opcode & 0x00f) +
+            (opcode & 0xf) +
             _CF;
-          _CF = res > 15 ? 1 : 0;
+          _CF = (res > 15) | 0;
           if (_DF && res > 9) {
             res += 6;
             _CF = 1;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1617,7 +1585,7 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY)) |
-            (opcode & 0x00f);
+            (opcode & 0xf);
           _ZF = res === 0 ? 1 : 0;
           if (r === 0) {
             _A = res & 0xf;
@@ -1653,7 +1621,7 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY)) ^
-            (opcode & 0x00f);
+            (opcode & 0xf);
           _ZF = res === 0 ? 1 : 0;
           if (r === 0) {
             _A = res & 0xf;
@@ -1684,25 +1652,21 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY)) -
-            (opcode & 0x00f) -
+            (opcode & 0xf) -
             _CF;
-          _CF = res < 0 ? 1 : 0;
+          _CF = (res < 0) | 0;
           if (_DF && _CF) {
             res += 10;
           }
           _ZF = (res & 0xf) === 0 ? 1 : 0;
           if (r === 0) {
-            _A = res & 0xf & 0xf;
+            _A = res & 0xf;
           } else if (r === 1) {
-            _B = res & 0xf & 0xf;
+            _B = res & 0xf;
           } else if (r === 2) {
-            _IX < RAM_SIZE
-              ? (_RAM[_IX] = res & 0xf & 0xf)
-              : set_mem(_IX, res & 0xf);
+            _IX < RAM_SIZE ? (_RAM[_IX] = res & 0xf) : set_mem(_IX, res & 0xf);
           } else {
-            _IY < RAM_SIZE
-              ? (_RAM[_IY] = res & 0xf & 0xf)
-              : set_mem(_IY, res & 0xf);
+            _IY < RAM_SIZE ? (_RAM[_IY] = res & 0xf) : set_mem(_IY, res & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
@@ -1749,7 +1713,7 @@ function _clock() {
                   : _IY < RAM_SIZE
                     ? _RAM[_IY]
                     : get_mem(_IY)) -
-            (opcode & 0x00f);
+            (opcode & 0xf);
           _ZF = cp === 0 ? 1 : 0;
           _CF = cp < 0 ? 1 : 0;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -1766,17 +1730,17 @@ function _clock() {
           // r←i3~i0
           const r = (opcode >> 4) & 0x3;
           if (r === 0) {
-            _A = opcode & 0x00f & 0xf;
+            _A = opcode & 0xf;
           } else if (r === 1) {
-            _B = opcode & 0x00f & 0xf;
+            _B = opcode & 0xf;
           } else if (r === 2) {
             _IX < RAM_SIZE
-              ? (_RAM[_IX] = opcode & 0x00f & 0xf)
-              : set_mem(_IX, opcode & 0x00f);
+              ? (_RAM[_IX] = opcode & 0xf)
+              : set_mem(_IX, opcode & 0xf);
           } else {
             _IY < RAM_SIZE
-              ? (_RAM[_IY] = opcode & 0x00f & 0xf)
-              : set_mem(_IY, opcode & 0x00f);
+              ? (_RAM[_IY] = opcode & 0xf)
+              : set_mem(_IY, opcode & 0xf);
           }
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           break;
@@ -1796,8 +1760,8 @@ function _clock() {
               // ldpx_mx_i
               // M(X)←i3~i0, X←X+1
               _IX < RAM_SIZE
-                ? (_RAM[_IX] = opcode & 0x00f & 0xf)
-                : set_mem(_IX, opcode & 0x00f);
+                ? (_RAM[_IX] = opcode & 0xf)
+                : set_mem(_IX, opcode & 0xf);
               _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
@@ -1806,8 +1770,8 @@ function _clock() {
               // ldpy_my_i
               // M(Y)←i3~i0, Y←Y+1
               _IY < RAM_SIZE
-                ? (_RAM[_IY] = opcode & 0x00f & 0xf)
-                : set_mem(_IY, opcode & 0x00f);
+                ? (_RAM[_IY] = opcode & 0xf)
+                : set_mem(_IY, opcode & 0xf);
               _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
@@ -2005,17 +1969,17 @@ function _clock() {
               // r←XH
               const r = opcode & 0x3;
               if (r === 0) {
-                _A = (_IX >> 4) & 0x00f & 0xf;
+                _A = (_IX >> 4) & 0xf;
               } else if (r === 1) {
-                _B = (_IX >> 4) & 0x00f & 0xf;
+                _B = (_IX >> 4) & 0xf;
               } else if (r === 2) {
                 _IX < RAM_SIZE
-                  ? (_RAM[_IX] = (_IX >> 4) & 0x00f & 0xf)
-                  : set_mem(_IX, (_IX >> 4) & 0x00f);
+                  ? (_RAM[_IX] = (_IX >> 4) & 0xf)
+                  : set_mem(_IX, (_IX >> 4) & 0xf);
               } else {
                 _IY < RAM_SIZE
-                  ? (_RAM[_IY] = (_IX >> 4) & 0x00f & 0xf)
-                  : set_mem(_IY, (_IX >> 4) & 0x00f);
+                  ? (_RAM[_IY] = (_IX >> 4) & 0xf)
+                  : set_mem(_IY, (_IX >> 4) & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
@@ -2025,17 +1989,17 @@ function _clock() {
               // r←XL
               const r = opcode & 0x3;
               if (r === 0) {
-                _A = _IX & 0x00f & 0xf;
+                _A = _IX & 0xf;
               } else if (r === 1) {
-                _B = _IX & 0x00f & 0xf;
+                _B = _IX & 0xf;
               } else if (r === 2) {
                 _IX < RAM_SIZE
-                  ? (_RAM[_IX] = _IX & 0x00f & 0xf)
-                  : set_mem(_IX, _IX & 0x00f);
+                  ? (_RAM[_IX] = _IX & 0xf)
+                  : set_mem(_IX, _IX & 0xf);
               } else {
                 _IY < RAM_SIZE
-                  ? (_RAM[_IY] = _IX & 0x00f & 0xf)
-                  : set_mem(_IY, _IX & 0x00f);
+                  ? (_RAM[_IY] = _IX & 0xf)
+                  : set_mem(_IY, _IX & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
@@ -2065,17 +2029,17 @@ function _clock() {
               // r←YH
               const r = opcode & 0x3;
               if (r === 0) {
-                _A = (_IY >> 4) & 0x00f & 0xf;
+                _A = (_IY >> 4) & 0xf;
               } else if (r === 1) {
-                _B = (_IY >> 4) & 0x00f & 0xf;
+                _B = (_IY >> 4) & 0xf;
               } else if (r === 2) {
                 _IX < RAM_SIZE
-                  ? (_RAM[_IX] = (_IY >> 4) & 0x00f & 0xf)
-                  : set_mem(_IX, (_IY >> 4) & 0x00f);
+                  ? (_RAM[_IX] = (_IY >> 4) & 0xf)
+                  : set_mem(_IX, (_IY >> 4) & 0xf);
               } else {
                 _IY < RAM_SIZE
-                  ? (_RAM[_IY] = (_IY >> 4) & 0x00f & 0xf)
-                  : set_mem(_IY, (_IY >> 4) & 0x00f);
+                  ? (_RAM[_IY] = (_IY >> 4) & 0xf)
+                  : set_mem(_IY, (_IY >> 4) & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
@@ -2085,17 +2049,17 @@ function _clock() {
               // r←YL
               const r = opcode & 0x3;
               if (r === 0) {
-                _A = _IY & 0x00f & 0xf;
+                _A = _IY & 0xf;
               } else if (r === 1) {
-                _B = _IY & 0x00f & 0xf;
+                _B = _IY & 0xf;
               } else if (r === 2) {
                 _IX < RAM_SIZE
-                  ? (_RAM[_IX] = _IY & 0x00f & 0xf)
-                  : set_mem(_IX, _IY & 0x00f);
+                  ? (_RAM[_IX] = _IY & 0xf)
+                  : set_mem(_IX, _IY & 0xf);
               } else {
                 _IY < RAM_SIZE
-                  ? (_RAM[_IY] = _IY & 0x00f & 0xf)
-                  : set_mem(_IY, _IY & 0x00f);
+                  ? (_RAM[_IY] = _IY & 0xf)
+                  : set_mem(_IY, _IY & 0xf);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
@@ -2407,14 +2371,14 @@ function _clock() {
                         ? _RAM[_IY]
                         : get_mem(_IY)) +
                 _CF;
-              _CF = res > 15 ? 1 : 0;
+              _CF = (res > 15) | 0;
               if (_DF && res > 9) {
                 res += 6;
                 _CF = 1;
               }
               _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IX < RAM_SIZE
-                ? (_RAM[_IX] = res & 0xf & 0xf)
+                ? (_RAM[_IX] = res & 0xf)
                 : set_mem(_IX, res & 0xf);
               _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2439,14 +2403,14 @@ function _clock() {
                         ? _RAM[_IY]
                         : get_mem(_IY)) +
                 _CF;
-              _CF = res > 15 ? 1 : 0;
+              _CF = (res > 15) | 0;
               if (_DF && res > 9) {
                 res += 6;
                 _CF = 1;
               }
               _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IY < RAM_SIZE
-                ? (_RAM[_IY] = res & 0xf & 0xf)
+                ? (_RAM[_IY] = res & 0xf)
                 : set_mem(_IY, res & 0xf);
               _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2480,13 +2444,13 @@ function _clock() {
                         ? _RAM[_IY]
                         : get_mem(_IY)) -
                 _CF;
-              _CF = res < 0 ? 1 : 0;
+              _CF = (res < 0) | 0;
               if (_DF && res < 0) {
                 res += 10;
               }
               _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IX < RAM_SIZE
-                ? (_RAM[_IX] = res & 0xf & 0xf)
+                ? (_RAM[_IX] = res & 0xf)
                 : set_mem(_IX, res & 0xf);
               _IX = (_IX & 0xf00) | ((_IX + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2511,13 +2475,13 @@ function _clock() {
                         ? _RAM[_IY]
                         : get_mem(_IY)) -
                 _CF;
-              _CF = res < 0 ? 1 : 0;
+              _CF = (res < 0) | 0;
               if (_DF && res < 0) {
                 res += 10;
               }
               _ZF = (res & 0xf) === 0 ? 1 : 0;
               _IY < RAM_SIZE
-                ? (_RAM[_IY] = res & 0xf & 0xf)
+                ? (_RAM[_IY] = res & 0xf)
                 : set_mem(_IY, res & 0xf);
               _IY = (_IY & 0xf00) | ((_IY + 1) & 0xff);
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
@@ -2554,11 +2518,11 @@ function _clock() {
         case 0x6: {
           // inc_mn
           // M(n3~n0)←M(n3~n0)+1
-          const mn = opcode & 0x00f;
+          const mn = opcode & 0xf;
           const res = _RAM[mn] + 1;
           _ZF = res === 16 ? 1 : 0;
-          _CF = res > 15 ? 1 : 0;
-          _RAM[mn] = res & 0xf & 0xf;
+          _CF = (res > 15) | 0;
+          _RAM[mn] = res & 0xf;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
           break;
@@ -2566,11 +2530,11 @@ function _clock() {
         case 0x7: {
           // dec_mn
           // M(n3~n0)←M(n3~n0)-1
-          const mn = opcode & 0x00f;
+          const mn = opcode & 0xf;
           const res = _RAM[mn] - 1;
           _ZF = res === 0 ? 1 : 0;
-          _CF = res < 0 ? 1 : 0;
-          _RAM[mn] = res & 0xf & 0xf;
+          _CF = (res < 0) | 0;
+          _RAM[mn] = res & 0xf;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           exec_cycles = 7;
           break;
@@ -2578,28 +2542,28 @@ function _clock() {
         case 0x8: {
           // ld_mn_a
           // M(n3~n0)←A
-          _RAM[opcode & 0x00f] = _A & 0xf & 0xf;
+          _RAM[opcode & 0xf] = _A & 0xf;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           break;
         }
         case 0x9: {
           // ld_mn_b
           // M(n3~n0)←B
-          _RAM[opcode & 0x00f] = _B & 0xf & 0xf;
+          _RAM[opcode & 0xf] = _B & 0xf;
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           break;
         }
         case 0xa: {
           // ld_a_mn
           // A←M(n3~n0)
-          _A = _RAM[opcode & 0x00f];
+          _A = _RAM[opcode & 0xf];
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           break;
         }
         case 0xb: {
           // ld_b_mn
           // B←M(n3~n0)
-          _B = _RAM[opcode & 0x00f];
+          _B = _RAM[opcode & 0xf];
           _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
           break;
         }
@@ -2641,7 +2605,7 @@ function _clock() {
               // push_xh
               // SP←SP-1, M(SP)←XH
               _SP = (_SP - 1) & 0xff;
-              _RAM[_SP] = (_IX >> 4) & 0x00f & 0xf;
+              _RAM[_SP] = (_IX >> 4) & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
             }
@@ -2649,7 +2613,7 @@ function _clock() {
               // push_xl
               // SP←SP-1, M(SP)←XL
               _SP = (_SP - 1) & 0xff;
-              _RAM[_SP] = _IX & 0x00f & 0xf;
+              _RAM[_SP] = _IX & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
             }
@@ -2665,7 +2629,7 @@ function _clock() {
               // push_yh
               // SP←SP-1, M(SP)←YH
               _SP = (_SP - 1) & 0xff;
-              _RAM[_SP] = (_IY >> 4) & 0x00f & 0xf;
+              _RAM[_SP] = (_IY >> 4) & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
             }
@@ -2673,7 +2637,7 @@ function _clock() {
               // push_yl
               // SP←SP-1, M(SP)←YL
               _SP = (_SP - 1) & 0xff;
-              _RAM[_SP] = _IY & 0x00f & 0xf;
+              _RAM[_SP] = _IY & 0xf;
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
               break;
             }
@@ -2916,16 +2880,16 @@ function _clock() {
               // r←SPL
               const r = opcode & 0x3;
               if (r === 0) {
-                _A = _SP & 0x0f & 0xf;
+                _A = _SP & 0xf;
               } else if (r === 1) {
-                _B = _SP & 0x0f & 0xf;
+                _B = _SP & 0xf;
               } else if (r === 2) {
                 _IX < RAM_SIZE
-                  ? (_RAM[_IX] = _SP & 0x0f & 0xf)
+                  ? (_RAM[_IX] = _SP & 0xf)
                   : set_mem(_IX, _SP & 0x0f);
               } else {
                 _IY < RAM_SIZE
-                  ? (_RAM[_IY] = _SP & 0x0f & 0xf)
+                  ? (_RAM[_IY] = _SP & 0xf)
                   : set_mem(_IY, _SP & 0x0f);
               }
               _PC = _NPC = (_PC & 0x1000) | ((_PC + 1) & 0xfff);
