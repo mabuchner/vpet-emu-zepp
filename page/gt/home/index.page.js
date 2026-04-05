@@ -171,7 +171,7 @@ Page({
       const cpu = app._options.globalData.cpu;
       clockMS.setProperty(
         prop.TEXT,
-        `${(1000 / app._options.globalData.clocksPerSecond).toFixed(1)}ms`,
+        `${(1000 / app._options.globalData.clocksPerSecond).toFixed(2)}ms`,
       );
       insText.setProperty(prop.TEXT, `#ins ${cpu.istr_counter()}`);
       pcText.setProperty(
