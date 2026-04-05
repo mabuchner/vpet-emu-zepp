@@ -1613,6 +1613,12 @@ export class CPU {
     return exec_cycles;
   }
 
+  clockBatch(n) {
+    for (let i = 0; i < n; i += 1) {
+      this.clock();
+    }
+  }
+
   _clock_OSC1() {
     this._sound.clock();
 
