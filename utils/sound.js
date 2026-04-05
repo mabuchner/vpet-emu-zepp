@@ -21,16 +21,21 @@ export class Sound {
     this._tone_generator = toneGenerator;
   }
 
-  clock() {
-    this._cycle_counter += 1;
+  // Advance n OSC1 ticks at once.
+  // Precondition: n must be small enough that each active counter fires at most
+  // once (i.e. n < min(ONE_SHOT_PULSE_WIDTH_DIV[*], ENVELOPE_CYCLE_DIV[*])).
+  // In practice n is a single instruction's exec_cycles (5–12), and the
+  // smallest divisor is 1024, so the invariant always holds.
+  clockBatch(n) {
+    this._cycle_counter += n;
     if (this._one_shot_counter > 0) {
-      this._one_shot_counter -= 1;
+      this._one_shot_counter -= n;
       if (this._one_shot_counter <= 0) {
         this._tone_generator.stop(this._cycle_counter / this._system_clock);
       }
     }
     if (this._envelope_counter > 0) {
-      this._envelope_counter -= 1;
+      this._envelope_counter -= n;
       if (this._envelope_counter <= 0) {
         this._envelope_step -= 1;
         this._tone_generator.play(
