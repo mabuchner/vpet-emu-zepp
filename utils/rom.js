@@ -1,23 +1,18 @@
 export class ROM {
   constructor(data) {
     this._data = data;
+    const wordCount = data.length >> 1;
+    this._opcodes = new Uint16Array(wordCount);
+    for (let i = 0; i < wordCount; i += 1) {
+      this._opcodes[i] = (data[i * 2] << 8) | data[i * 2 + 1];
+    }
   }
 
-  getWord(address) {
-    return (this._data[address] << 8) | this._data[address + 1];
+  getOpcode(pc) {
+    return this._opcodes[pc];
   }
 
   size() {
     return this._data.length;
   }
 }
-
-//const data = new Uint8Array(require("Storage").readArrayBuffer("rom.bin"));
-//const rom = new ROM(data);
-//setInterval(() => {
-//  const r = (rom.size() * Math.random()) | 0;
-//  const start = Date.now();
-//  rom.getWord(r);
-//  const dt = Date.now() - start;
-//  console.log(`getWord() = ${dt}`);
-//}, 1000);
