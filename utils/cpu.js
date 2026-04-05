@@ -2344,7 +2344,7 @@ export class CPU {
       res += 6;
       this._CF = 1;
     }
-    this._ZF = res & (0xf === 0) ? 1 : 0;
+    this._ZF = (res & 0xf) === 0 ? 1 : 0;
     this.set_mem(this._IX, res & 0xf);
     this._IX = (this._IX & 0xf00) | ((this._IX + 1) & 0xff);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
@@ -2360,7 +2360,7 @@ export class CPU {
       res += 6;
       this._CF = 1;
     }
-    this._ZF = res & (0xf === 0) ? 1 : 0;
+    this._ZF = (res & 0xf) === 0 ? 1 : 0;
     this.set_mem(this._IY, res & 0xf);
     this._IY = (this._IY & 0xf00) | ((this._IY + 1) & 0xff);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
@@ -2375,7 +2375,7 @@ export class CPU {
     if (this._DF && res < 0) {
       res += 10;
     }
-    this._ZF = res & (0xf === 0) ? 1 : 0;
+    this._ZF = (res & 0xf) === 0 ? 1 : 0;
     this.set_mem(this._IX, res & 0xf);
     this._IX = (this._IX & 0xf00) | ((this._IX + 1) & 0xff);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
@@ -2390,7 +2390,7 @@ export class CPU {
     if (this._DF && res < 0) {
       res += 10;
     }
-    this._ZF = res & (0xf === 0) ? 1 : 0;
+    this._ZF = (res & 0xf) === 0 ? 1 : 0;
     this.set_mem(this._IY, res & 0xf);
     this._IY = (this._IY & 0xf00) | ((this._IY + 1) & 0xff);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
