@@ -29,10 +29,8 @@ App({
     let batchSize = 8;
     this.globalData.updateInterval = setInterval(() => {
       const startTime = Date.now();
-      for (let i = 0; i < batchSize; i += 1) {
-        this.globalData.cpu.clock();
-        this.globalData.clockCounter += 1;
-      }
+      this.globalData.cpu.clockBatch(batchSize);
+      this.globalData.clockCounter += batchSize;
       const elapsed = Date.now() - startTime;
       if (elapsed < 8) {
         batchSize += 1;

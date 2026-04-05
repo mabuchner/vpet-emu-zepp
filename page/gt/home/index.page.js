@@ -171,36 +171,39 @@ Page({
       const cpu = app._options.globalData.cpu;
       clockMS.setProperty(
         prop.TEXT,
-        `${(1000 / app._options.globalData.clocksPerSecond).toFixed(1)}ms`,
+        `${(1000 / app._options.globalData.clocksPerSecond).toFixed(2)}ms`,
       );
-      insText.setProperty(prop.TEXT, `#ins ${cpu.istr_counter()}`);
+      insText.setProperty(
+        prop.TEXT,
+        `clk/s ${app._options.globalData.clocksPerSecond}`,
+      );
       pcText.setProperty(
         prop.TEXT,
         `PC 0x${cpu.pc().toString(16).padStart(4, "0")}`,
       );
       npcText.setProperty(
         prop.TEXT,
-        `NPC 0x${cpu._NPC.toString(16).padStart(4, "0")}`,
+        `NPC 0x${cpu.get_NPC().toString(16).padStart(4, "0")}`,
       );
       spText.setProperty(
         prop.TEXT,
-        `SP 0x${cpu._SP.toString(16).padStart(2, "0")}`,
+        `SP 0x${cpu.get_SP().toString(16).padStart(2, "0")}`,
       );
       aText.setProperty(
         prop.TEXT,
-        `A 0x${cpu._A.toString(16).padStart(1, "0")}`,
+        `A 0x${cpu.get_A().toString(16).padStart(1, "0")}`,
       );
       bText.setProperty(
         prop.TEXT,
-        `B 0x${cpu._B.toString(16).padStart(1, "0")}`,
+        `B 0x${cpu.get_B().toString(16).padStart(1, "0")}`,
       );
       ixText.setProperty(
         prop.TEXT,
-        `IX 0x${cpu._IX.toString(16).padStart(3, "0")}`,
+        `IX 0x${cpu.get_IX().toString(16).padStart(3, "0")}`,
       );
       iyText.setProperty(
         prop.TEXT,
-        `IY 0x${cpu._IY.toString(16).padStart(3, "0")}`,
+        `IY 0x${cpu.get_IY().toString(16).padStart(3, "0")}`,
       );
     }, 1000);
   },

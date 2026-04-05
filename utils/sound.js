@@ -22,15 +22,19 @@ export class Sound {
   }
 
   clock() {
-    this._cycle_counter += 1;
+    this.batch(1);
+  }
+
+  batch(n) {
+    this._cycle_counter += n;
     if (this._one_shot_counter > 0) {
-      this._one_shot_counter -= 1;
+      this._one_shot_counter -= n;
       if (this._one_shot_counter <= 0) {
         this._tone_generator.stop(this._cycle_counter / this._system_clock);
       }
     }
     if (this._envelope_counter > 0) {
-      this._envelope_counter -= 1;
+      this._envelope_counter -= n;
       if (this._envelope_counter <= 0) {
         this._envelope_step -= 1;
         this._tone_generator.play(
