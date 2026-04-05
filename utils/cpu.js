@@ -1944,7 +1944,7 @@ export class CPU {
     const r = (opcode >> 2) & 0x3;
     const q = opcode & 0x3;
     let res = this._get_abmxmy_tbl[r]() + this._get_abmxmy_tbl[q]();
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     if (this._DF && res > 9) {
       res += 6;
       this._CF = 1;
@@ -1960,7 +1960,7 @@ export class CPU {
     const r = (opcode >> 2) & 0x3;
     const q = opcode & 0x3;
     let res = this._get_abmxmy_tbl[r]() + this._get_abmxmy_tbl[q]() + this._CF;
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     if (this._DF && res > 9) {
       res += 6;
       this._CF = 1;
@@ -1976,7 +1976,7 @@ export class CPU {
     const r = (opcode >> 2) & 0x3;
     const q = opcode & 0x3;
     let res = this._get_abmxmy_tbl[r]() - this._get_abmxmy_tbl[q]();
-    this._CF = res < 0 ? 1 : 0;
+    this._CF = (res < 0) | 0;
     if (this._DF && res < 0) {
       res += 10;
     }
@@ -1991,7 +1991,7 @@ export class CPU {
     const r = (opcode >> 2) & 0x3;
     const q = opcode & 0x3;
     let res = this._get_abmxmy_tbl[r]() - this._get_abmxmy_tbl[q]() - this._CF;
-    this._CF = res < 0 ? 1 : 0;
+    this._CF = (res < 0) | 0;
     if (this._DF && res < 0) {
       res += 10;
     }
@@ -2038,7 +2038,7 @@ export class CPU {
     // d3 ←d2, d2 ←d1, d1 ←d0, d0 ←C, C← d3
     const r = opcode & 0x3;
     const res = (this._get_abmxmy_tbl[r]() << 1) + this._CF;
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     this._set_abmxmy_tbl[r](res & 0xf);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
     return 7;
@@ -2055,7 +2055,7 @@ export class CPU {
     // r ← r+i3~i0
     const r = (opcode >> 4) & 0x3;
     let res = this._get_abmxmy_tbl[r]() + (opcode & 0x00f);
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     if (this._DF && res > 9) {
       res += 6;
       this._CF = 1;
@@ -2070,7 +2070,7 @@ export class CPU {
     // r ← r+i3~i0+C
     const r = (opcode >> 4) & 0x3;
     let res = this._get_abmxmy_tbl[r]() + (opcode & 0x00f) + this._CF;
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     if (this._DF && res > 9) {
       res += 6;
       this._CF = 1;
@@ -2115,7 +2115,7 @@ export class CPU {
     // r ← r-i3~i0-C
     const r = (opcode >> 4) & 0x3;
     let res = this._get_abmxmy_tbl[r]() - (opcode & 0x00f) - this._CF;
-    this._CF = res < 0 ? 1 : 0;
+    this._CF = (res < 0) | 0;
     if (this._DF && this._CF) {
       res += 10;
     }
@@ -2339,7 +2339,7 @@ export class CPU {
     // M(X) ← M(X)+r+C, X ← X+1
     const r = opcode & 0x3;
     let res = this.get_mem(this._IX) + this._get_abmxmy_tbl[r]() + this._CF;
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     if (this._DF && res > 9) {
       res += 6;
       this._CF = 1;
@@ -2355,7 +2355,7 @@ export class CPU {
     // M(Y) ← M(Y)+r+C, Y ← Y+1
     const r = opcode & 0x3;
     let res = this.get_mem(this._IY) + this._get_abmxmy_tbl[r]() + this._CF;
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     if (this._DF && res > 9) {
       res += 6;
       this._CF = 1;
@@ -2371,7 +2371,7 @@ export class CPU {
     //  M(X) ← M(X)-r-C, X ← X+1
     const r = opcode & 0x3;
     let res = this.get_mem(this._IX) - this._get_abmxmy_tbl[r]() - this._CF;
-    this._CF = res < 0 ? 1 : 0;
+    this._CF = (res < 0) | 0;
     if (this._DF && res < 0) {
       res += 10;
     }
@@ -2386,7 +2386,7 @@ export class CPU {
     // M(Y) ← M(Y)-r-C, Y ← Y+1
     const r = opcode & 0x3;
     let res = this.get_mem(this._IY) - this._get_abmxmy_tbl[r]() - this._CF;
-    this._CF = res < 0 ? 1 : 0;
+    this._CF = (res < 0) | 0;
     if (this._DF && res < 0) {
       res += 10;
     }
@@ -2424,7 +2424,7 @@ export class CPU {
     const mn = opcode & 0x00f;
     const res = this.get_mem(mn) + 1;
     this._ZF = res === 16 ? 1 : 0;
-    this._CF = res > 15 ? 1 : 0;
+    this._CF = (res > 15) | 0;
     this.set_mem(mn, res & 0xf);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
     return 7;
@@ -2435,7 +2435,7 @@ export class CPU {
     const mn = opcode & 0x00f;
     const res = this.get_mem(mn) - 1;
     this._ZF = res === 0 ? 1 : 0;
-    this._CF = res < 0 ? 1 : 0;
+    this._CF = (res < 0) | 0;
     this.set_mem(mn, res & 0xf);
     this._PC = this._NPC = (this._PC & 0x1000) | ((this._PC + 1) & 0xfff);
     return 7;
