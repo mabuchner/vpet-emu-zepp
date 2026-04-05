@@ -1562,7 +1562,7 @@ export class CPU {
     if (!this._HALT) {
       this._if_delay = false;
       //const s0 = Date.now();
-      const opcode = this._ROM.getWord(this._PC * 2);
+      const opcode = this._ROM.getOpcode(this._PC);
       //const dt0 = Date.now() - s0;
 
       //const s1 = Date.now();
