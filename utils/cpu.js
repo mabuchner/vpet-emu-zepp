@@ -1599,40 +1599,16 @@ export class CPU {
 
     //const os = Date.now();
     if (!(this._CTRL_OSC & IO_CLKCHG)) {
-      // Normal mode: exec_cycles == number of OSC1 ticks elapsed this instruction.
-      // Batch all sub-system counter updates instead of calling _clock_OSC1() in a loop.
-      // Precondition: exec_cycles (5–12) is smaller than every clock divisor (≥128),
-      // so each counter fires at most once per instruction.
-      this._sound.clockBatch(exec_cycles);
-
-      if ((this._PTC & IO_PTC) > 1) {
-        this._ptimer_counter -= exec_cycles;
-        if (this._ptimer_counter <= 0) {
-          this._ptimer_counter += PTIMER_CLOCK_DIV[this._PTC & IO_PTC];
-          this._process_ptimer();
-        }
-      }
-
-      this._stopwatch_counter -= exec_cycles;
-      if (this._stopwatch_counter <= 0) {
-        this._stopwatch_counter += STOPWATCH_CLOCK_DIV;
-        this._process_stopwatch();
-      }
-
-      this._timer_counter -= exec_cycles;
-      if (this._timer_counter <= 0) {
-        this._timer_counter += TIMER_CLOCK_DIV;
-        this._process_timer();
-      }
-
+      this._clock_OSC1(exec_cycles);
       exec_cycles *= this._OSC1_clock_div;
     } else {
       // IO_CLKCHG mode: CPU runs on high-frequency oscillator; OSC1 advances
-      // fractionally per CPU cycle, so use the original counter-based approach.
+      // fractionally per CPU cycle (~1/48). Track accumulated ticks with a
+      // counter and fire _clock_OSC1() at most once per instruction.
       this._OSC1_counter -= exec_cycles;
       while (this._OSC1_counter <= 0) {
         this._OSC1_counter += this._OSC1_clock_div;
-        this._clock_OSC1();
+        this._clock_OSC1(1);
       }
     }
     //const odt = Date.now() - os;
@@ -1647,24 +1623,28 @@ export class CPU {
     }
   }
 
-  _clock_OSC1() {
-    this._sound.clockBatch(1);
+  // Advance all OSC1-driven sub-systems by osc1Ticks ticks.
+  // Precondition: osc1Ticks must be smaller than every clock divisor (≥128)
+  // so each counter fires at most once. In practice osc1Ticks is either 1
+  // (IO_CLKCHG mode) or exec_cycles (5–12) in normal mode.
+  _clock_OSC1(osc1Ticks) {
+    this._sound.clockBatch(osc1Ticks);
 
     if ((this._PTC & IO_PTC) > 1) {
-      this._ptimer_counter -= 1;
+      this._ptimer_counter -= osc1Ticks;
       if (this._ptimer_counter <= 0) {
         this._ptimer_counter += PTIMER_CLOCK_DIV[this._PTC & IO_PTC];
         this._process_ptimer();
       }
     }
 
-    this._stopwatch_counter -= 1;
+    this._stopwatch_counter -= osc1Ticks;
     if (this._stopwatch_counter <= 0) {
       this._stopwatch_counter += STOPWATCH_CLOCK_DIV;
       this._process_stopwatch();
     }
 
-    this._timer_counter -= 1;
+    this._timer_counter -= osc1Ticks;
     if (this._timer_counter <= 0) {
       this._timer_counter += TIMER_CLOCK_DIV;
       this._process_timer();
