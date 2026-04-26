@@ -213,8 +213,6 @@ let _OSC1_counter;
 let _timer_counter;
 let _ptimer_counter;
 let _stopwatch_counter;
-let _execution_counter; // eslint-disable-line no-unused-vars
-let _instr_counter;
 let _if_delay;
 let _RESET;
 let _io_tbl;
@@ -256,8 +254,6 @@ export function initCPU(rom, clock, toneGenerator) {
   _timer_counter = 0;
   _ptimer_counter = 0;
   _stopwatch_counter = 0;
-  _execution_counter = 0;
-  _instr_counter = 0;
 
   _if_delay = false;
 
@@ -584,8 +580,6 @@ export function reset() {
   _OSC1_counter = 0;
   _timer_counter = 0;
   _stopwatch_counter = 0;
-  _execution_counter = 0;
-
   sound.set_buzzer_off();
   sound.set_envelope_off();
 }
@@ -1092,10 +1086,6 @@ export function get_ROM() {
   return _ROM;
 }
 
-export function istr_counter() {
-  return _instr_counter;
-}
-
 function clock() {
   let exec_cycles = 7;
 
@@ -1120,7 +1110,6 @@ function clock() {
     //  console.log(op);
     //}
     //console.log(`getWord=${dt0}, at=${dt1}, exec=${dt}`);
-    _instr_counter += 1;
   }
 
   //const is = Date.now();
