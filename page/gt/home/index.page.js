@@ -168,39 +168,39 @@ Page({
 
     this.state.sateInterval = setInterval(() => {
       const app = getApp();
-      const cpu = app._options.globalData.cpu;
+      const cpuModule = app._options.globalData.cpu;
       clockMS.setProperty(
         prop.TEXT,
         `${(1000 / app._options.globalData.clocksPerSecond).toFixed(2)}ms`,
       );
-      insText.setProperty(prop.TEXT, `#ins ${cpu.istr_counter()}`);
+      insText.setProperty(prop.TEXT, `#ins ${cpuModule.istr_counter()}`);
       pcText.setProperty(
         prop.TEXT,
-        `PC 0x${cpu.pc().toString(16).padStart(4, "0")}`,
+        `PC 0x${cpuModule.pc().toString(16).padStart(4, "0")}`,
       );
       npcText.setProperty(
         prop.TEXT,
-        `NPC 0x${cpu._NPC.toString(16).padStart(4, "0")}`,
+        `NPC 0x${cpuModule.get_NPC().toString(16).padStart(4, "0")}`,
       );
       spText.setProperty(
         prop.TEXT,
-        `SP 0x${cpu._SP.toString(16).padStart(2, "0")}`,
+        `SP 0x${cpuModule.get_SP().toString(16).padStart(2, "0")}`,
       );
       aText.setProperty(
         prop.TEXT,
-        `A 0x${cpu._A.toString(16).padStart(1, "0")}`,
+        `A 0x${cpuModule.get_A().toString(16).padStart(1, "0")}`,
       );
       bText.setProperty(
         prop.TEXT,
-        `B 0x${cpu._B.toString(16).padStart(1, "0")}`,
+        `B 0x${cpuModule.get_B().toString(16).padStart(1, "0")}`,
       );
       ixText.setProperty(
         prop.TEXT,
-        `IX 0x${cpu._IX.toString(16).padStart(3, "0")}`,
+        `IX 0x${cpuModule.get_IX().toString(16).padStart(3, "0")}`,
       );
       iyText.setProperty(
         prop.TEXT,
-        `IY 0x${cpu._IY.toString(16).padStart(3, "0")}`,
+        `IY 0x${cpuModule.get_IY().toString(16).padStart(3, "0")}`,
       );
     }, 1000);
   },
@@ -220,11 +220,8 @@ Page({
     });
 
     this.state.displayInterval = setInterval(() => {
-      const app = getApp();
-      const cpu = app._options.globalData.cpu;
-
       const buf = displayBuffers[displayBufferIndex];
-      packVram(cpu.get_VRAM_words(), buf);
+      packVram(getApp()._options.globalData.cpu.get_VRAM_words(), buf);
 
       const previousBuf = displayBuffers[(displayBufferIndex + 1) % 2];
       let hasDiff = false;
@@ -296,14 +293,12 @@ Page({
   },
   _buildButtonsUI() {
     const pressButton = (port, pin, level) => {
-      const cpu = getApp()._options.globalData.cpu;
-      cpu.pin_set(port, pin, level);
+      getApp()._options.globalData.cpu.pin_set(port, pin, level);
       logger.log(`button down (port=${port}, pin=${pin}, level=${level})`);
     };
 
     const releaseButton = (port, pin) => {
-      const cpu = getApp()._options.globalData.cpu;
-      cpu.pin_release(port, pin);
+      getApp()._options.globalData.cpu.pin_release(port, pin);
       logger.log(`button up (port=${port}, pin=${pin})`);
     };
 
