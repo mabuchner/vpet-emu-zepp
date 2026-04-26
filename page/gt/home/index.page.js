@@ -76,8 +76,8 @@ Page({
     clearInterval(this.state.stateInterval);
   },
   _buildDebugUI() {
-    const insText = createWidget(widget.TEXT, {
-      text: "#ins 0",
+    const batchText = createWidget(widget.TEXT, {
+      text: "batch 0",
       x: 140,
       y: 30,
       w: 100,
@@ -166,14 +166,17 @@ Page({
       text_size: 15,
     });
 
-    this.state.sateInterval = setInterval(() => {
+    this.state.stateInterval = setInterval(() => {
       const app = getApp();
       const cpuModule = app._options.globalData.cpu;
       clockMS.setProperty(
         prop.TEXT,
         `${(1000 / app._options.globalData.clocksPerSecond).toFixed(2)}ms`,
       );
-      insText.setProperty(prop.TEXT, `#ins ${cpuModule.istr_counter()}`);
+      batchText.setProperty(
+        prop.TEXT,
+        `batch ${app._options.globalData.batchSize}`,
+      );
       pcText.setProperty(
         prop.TEXT,
         `PC 0x${cpuModule.pc().toString(16).padStart(4, "0")}`,
