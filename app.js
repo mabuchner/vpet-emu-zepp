@@ -12,6 +12,7 @@ App({
     clockCounterInterval: undefined,
     clockCounter: 0,
     clocksPerSecond: 0,
+    batchSize: 0,
   },
   onCreate(/*options*/) {
     console.log("app on create invoke");
@@ -39,6 +40,7 @@ App({
       } else if (elapsed > 20) {
         batchSize = Math.max(1, batchSize - 1);
       }
+      this.globalData.batchSize = batchSize;
     }, 20);
 
     let lastReset = Date.now();
