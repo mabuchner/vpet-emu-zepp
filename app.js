@@ -39,8 +39,12 @@ App({
       }
     }, 10);
 
+    let lastReset = Date.now();
     this.globalData.clockCounterInterval = setInterval(() => {
-      this.globalData.clocksPerSecond = this.globalData.clockCounter;
+      const now = Date.now();
+      const elapsed = now - lastReset;
+      lastReset = now;
+      this.globalData.clocksPerSecond = (this.globalData.clockCounter / elapsed) * 1000;
       this.globalData.clockCounter = 0;
     }, 1000);
   },
