@@ -1,4 +1,4 @@
-import { Sound } from "./sound";
+import * as sound from "./sound";
 
 const OSC1_CLOCK = 32768;
 const TIMER_CLOCK_DIV = OSC1_CLOCK / 256;
@@ -208,7 +208,6 @@ const mask = {
 // E0C6200 — module-level state
 
 let _ROM;
-let _sound;
 let _OSC1_clock_div;
 let _OSC1_counter;
 let _timer_counter;
@@ -243,7 +242,7 @@ let _PTC, _SC, _HZR, _IOC, _PUP; // eslint-disable-line no-unused-vars
 
 export function initCPU(rom, clock, toneGenerator) {
   _ROM = rom;
-  _sound = new Sound(OSC1_CLOCK, toneGenerator);
+  sound.initSound(OSC1_CLOCK, toneGenerator);
 
   _port_pullup = mask.port_pullup;
 
@@ -587,8 +586,8 @@ export function reset() {
   _stopwatch_counter = 0;
   _execution_counter = 0;
 
-  _sound.set_buzzer_off();
-  _sound.set_envelope_off();
+  sound.set_buzzer_off();
+  sound.set_envelope_off();
 }
 
 function _get_io_dummy() {
@@ -795,9 +794,9 @@ function _get_io_r4() {
 function _set_io_r4(value) {
   _R4 = value;
   if (value & IO_R43) {
-    _sound.set_buzzer_off();
+    sound.set_buzzer_off();
   } else {
-    _sound.set_buzzer_on();
+    sound.set_buzzer_on();
   }
 }
 
@@ -907,11 +906,11 @@ function _get_io_ctrl_bz1() {
 
 function _set_io_ctrl_bz1(value) {
   _CTRL_BZ1 = value;
-  _sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
+  sound.set_freq(_CTRL_BZ1 & IO_BZFQ);
 }
 
 function _get_io_ctrl_bz2() {
-  const isOneShotRinging = _sound.is_one_shot_ringing() ? 1 : 0;
+  const isOneShotRinging = sound.is_one_shot_ringing() ? 1 : 0;
   return (_CTRL_BZ2 & (IO_ENVRT | IO_ENVON)) | (IO_BZSHOT * isOneShotRinging);
 }
 
@@ -919,18 +918,18 @@ function _set_io_ctrl_bz2(value) {
   _CTRL_BZ2 = value & (IO_ENVRT | IO_ENVON);
 
   const cycle = (value & IO_ENVRT) > 0 ? 1 : 0;
-  _sound.set_envelope_cycle(cycle);
+  sound.set_envelope_cycle(cycle);
   if (value & IO_BZSHOT) {
     const duration = (_CTRL_BZ1 & IO_SHOTPW) > 0 ? 1 : 0;
-    _sound.one_shot(duration);
+    sound.one_shot(duration);
   }
   if (value & IO_ENVON) {
-    _sound.set_envelope_on();
+    sound.set_envelope_on();
   } else {
-    _sound.set_envelope_off();
+    sound.set_envelope_off();
   }
   if (value & IO_ENVRST) {
-    _sound.reset_envelope();
+    sound.reset_envelope();
   }
 }
 
@@ -1173,7 +1172,7 @@ export function clockBatch(n) {
 // so each counter fires at most once. In practice osc1Ticks is either 1
 // (IO_CLKCHG mode) or exec_cycles (5–12) in normal mode.
 function _clock_OSC1(osc1Ticks) {
-  _sound.clockBatch(osc1Ticks);
+  sound.clockBatch(osc1Ticks);
 
   if ((_PTC & IO_PTC) > 1) {
     _ptimer_counter -= osc1Ticks;

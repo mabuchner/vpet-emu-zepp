@@ -46,7 +46,8 @@ App({
       const now = Date.now();
       const elapsed = now - lastReset;
       lastReset = now;
-      this.globalData.clocksPerSecond = (this.globalData.clockCounter / elapsed) * 1000;
+      this.globalData.clocksPerSecond =
+        (this.globalData.clockCounter / elapsed) * 1000;
       this.globalData.clockCounter = 0;
     }, 1000);
   },
