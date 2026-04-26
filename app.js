@@ -13,6 +13,7 @@ App({
     clockCounter: 0,
     clocksPerSecond: 0,
     batchSize: 0,
+    lastElapsed: 0,
   },
   onCreate(/*options*/) {
     console.log("app on create invoke");
@@ -26,21 +27,28 @@ App({
     cpu.initCPU(this.globalData.rom, clock, toneGenerator);
     this.globalData.cpu = cpu;
 
-    // Adaptive batch size: adjusted each interval to keep elapsed time near
-    // 16 ms, maximising clock() throughput without overrunning the 20 ms
-    // period.
+    // Adaptive batch size: recalculated each interval from the measured
+    // per-instruction time, targeting TARGET_FRACTION of the interval period.
+    // This converges in one step and automatically tracks performance changes.
+    const INTERVAL_MS = 20;
+    const TARGET_FRACTION = 0.8; // target 16 ms, leave 4 ms headroom
     let batchSize = 8;
     this.globalData.updateInterval = setInterval(() => {
       const startTime = Date.now();
       cpu.clockBatch(batchSize);
       this.globalData.clockCounter += batchSize;
       const elapsed = Date.now() - startTime;
-      if (elapsed < 16) {
-        batchSize += 1;
-      } else if (elapsed > 20) {
-        batchSize = Math.max(1, batchSize - 1);
+      if (elapsed > 0) {
+        const msPerClock = elapsed / batchSize;
+        batchSize = Math.max(
+          1,
+          Math.floor((INTERVAL_MS * TARGET_FRACTION) / msPerClock),
+        );
+      } else {
+        batchSize *= 2;
       }
       this.globalData.batchSize = batchSize;
+      this.globalData.lastElapsed = elapsed;
     }, 20);
 
     let lastReset = Date.now();
