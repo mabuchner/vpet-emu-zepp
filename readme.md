@@ -20,7 +20,6 @@ This emulator is a work in progress, with many limitations:
 - ✅ Only Tamagotchi P1 is known to run successfully.
 - ✅ Tested only on Amazfit T-Rex 3.
 - ⏱️ Emulation speed varies by device; close to full speed on Amazfit T-Rex 3.
-- 🧭 No status icons.
 - 🔇 Sound is not implemented.
 - 💾 No save states - restarting the app resets progress.
 
