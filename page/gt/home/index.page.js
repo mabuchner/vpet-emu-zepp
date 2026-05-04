@@ -171,7 +171,7 @@ Page({
       const cpuModule = app._options.globalData.cpu;
       clockMS.setProperty(
         prop.TEXT,
-        `${app._options.globalData.lastElapsed}ms`,
+        `${app._options.globalData.msPerClock.toFixed(3)}ms`,
       );
       batchText.setProperty(
         prop.TEXT,

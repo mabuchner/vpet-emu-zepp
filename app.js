@@ -13,7 +13,7 @@ App({
     clockCounter: 0,
     clocksPerSecond: 0,
     batchSize: 0,
-    lastElapsed: 0,
+    msPerClock: 0,
   },
   onCreate(/*options*/) {
     console.log("app on create invoke");
@@ -44,12 +44,13 @@ App({
           1,
           Math.floor((INTERVAL_MS * TARGET_FRACTION) / msPerClock),
         );
+        this.globalData.msPerClock =
+          0.9 * this.globalData.msPerClock + 0.1 * msPerClock;
       } else {
-        batchSize *= 2;
+        batchSize *= 2; // batch too fast for Date.now() to measure; double until elapsed > 0
       }
       this.globalData.batchSize = batchSize;
-      this.globalData.lastElapsed = elapsed;
-    }, 20);
+    }, INTERVAL_MS);
 
     let lastReset = Date.now();
     this.globalData.clockCounterInterval = setInterval(() => {
