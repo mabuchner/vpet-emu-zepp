@@ -283,7 +283,7 @@ export function initCPU(rom, clock, toneGenerator) {
   _io_tbl[0x30] = [_get_io_sd30, _set_io_sd30];
   _io_tbl[0x31] = [_get_io_sd74, _set_io_sd74];
   _io_tbl[0x40] = [_get_io_k0, _set_io_dummy];
-  _io_tbl[0x41] = [_get_io_dfk0, _set_io_dummy];
+  _io_tbl[0x41] = [_get_io_dfk0, _set_io_dfk0];
   _io_tbl[0x42] = [_get_io_k1, _set_io_dummy];
   _io_tbl[0x50] = [_get_io_r0, _set_io_r0];
   _io_tbl[0x51] = [_get_io_r1, _set_io_r1];
@@ -740,7 +740,6 @@ function _get_io_dfk0() {
   return _DFK0;
 }
 
-// eslint-disable-next-line no-unused-vars
 function _set_io_dfk0(value) {
   _DFK0 = value;
 }
