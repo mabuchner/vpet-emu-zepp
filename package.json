@@ -9,7 +9,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:fix": "eslint --fix .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "generate-icons": "node scripts/generate_icons.js"
   },
   "author": "mabuchner",
   "license": "CC BY-NC 4.0",

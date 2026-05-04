@@ -18,6 +18,21 @@ const DISPLAY_HEIGHT = DISPLAY_PIXEL_COUNT_Y * DISPLAY_PIXEL_SIZE;
 const DISPLAY_POS_X = 120;
 const DISPLAY_POS_Y = 160;
 
+const ICON_SIZE = 48;
+const ICON_SLOT_SIZE = DISPLAY_WIDTH / 4;
+const ICON_PADDING = (ICON_SLOT_SIZE - ICON_SIZE) / 2;
+
+const ICON_DEFS = [
+  { src: "image/tamagotchi_p1/icon_16_0.png", nibble: 16, bit: 0 },
+  { src: "image/tamagotchi_p1/icon_16_1.png", nibble: 16, bit: 1 },
+  { src: "image/tamagotchi_p1/icon_16_2.png", nibble: 16, bit: 2 },
+  { src: "image/tamagotchi_p1/icon_16_3.png", nibble: 16, bit: 3 },
+  { src: "image/tamagotchi_p1/icon_137_0.png", nibble: 137, bit: 0 },
+  { src: "image/tamagotchi_p1/icon_137_1.png", nibble: 137, bit: 1 },
+  { src: "image/tamagotchi_p1/icon_137_2.png", nibble: 137, bit: 2 },
+  { src: "image/tamagotchi_p1/icon_137_3.png", nibble: 137, bit: 3 },
+];
+
 const displayBuffers = [
   new Uint16Array(DISPLAY_WIDTH),
   new Uint16Array(DISPLAY_WIDTH),
@@ -46,6 +61,7 @@ Page({
   state: {
     stateInterval: undefined,
     displayInterval: undefined,
+    iconInterval: undefined,
   },
   onInit() {
     logger.debug("page onInit invoked");
@@ -74,6 +90,7 @@ Page({
     logger.debug("page onDestroy invoked");
     clearInterval(this.state.displayInterval);
     clearInterval(this.state.stateInterval);
+    clearInterval(this.state.iconInterval);
   },
   _buildDebugUI() {
     const batchText = createWidget(widget.TEXT, {
@@ -277,22 +294,54 @@ Page({
     }, 50);
   },
   _buildIconsUI() {
-    const h = DISPLAY_WIDTH / 4;
-
     createWidget(widget.FILL_RECT, {
       x: DISPLAY_POS_X,
-      y: DISPLAY_POS_Y - h,
+      y: DISPLAY_POS_Y - ICON_SLOT_SIZE,
       w: DISPLAY_WIDTH,
-      h: h,
+      h: ICON_SLOT_SIZE,
       color: 0xbbc7ac,
     });
     createWidget(widget.FILL_RECT, {
       x: DISPLAY_POS_X,
       y: DISPLAY_POS_Y + DISPLAY_HEIGHT,
       w: DISPLAY_WIDTH,
-      h: h,
+      h: ICON_SLOT_SIZE,
       color: 0xbbc7ac,
     });
+
+    const topBaseY = DISPLAY_POS_Y - ICON_SLOT_SIZE + ICON_PADDING;
+    const bottomBaseY = DISPLAY_POS_Y + DISPLAY_HEIGHT + ICON_PADDING;
+
+    const iconWidgets = [];
+    for (let slotIndex = 0; slotIndex < 4; slotIndex += 1) {
+      const slotX = DISPLAY_POS_X + slotIndex * ICON_SLOT_SIZE + ICON_PADDING;
+      iconWidgets.push(
+        createWidget(widget.IMG, {
+          x: slotX,
+          y: topBaseY,
+          src: ICON_DEFS[slotIndex].src,
+        }),
+      );
+    }
+    for (let slotIndex = 0; slotIndex < 4; slotIndex += 1) {
+      const slotX = DISPLAY_POS_X + slotIndex * ICON_SLOT_SIZE + ICON_PADDING;
+      iconWidgets.push(
+        createWidget(widget.IMG, {
+          x: slotX,
+          y: bottomBaseY,
+          src: ICON_DEFS[slotIndex + 4].src,
+        }),
+      );
+    }
+
+    this.state.iconInterval = setInterval(() => {
+      const vram = getApp()._options.globalData.cpu.get_VRAM();
+      for (let iconIndex = 0; iconIndex < 8; iconIndex += 1) {
+        const def = ICON_DEFS[iconIndex];
+        const isOn = (vram[def.nibble] >> def.bit) & 1;
+        iconWidgets[iconIndex].setProperty(prop.VISIBLE, isOn !== 0);
+      }
+    }, 50);
   },
   _buildButtonsUI() {
     const pressButton = (port, pin, level) => {
