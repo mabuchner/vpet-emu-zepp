@@ -7,12 +7,19 @@ import {
   setWakeUpRelaunch,
 } from "@zos/display";
 import { readFileSync } from "@zos/fs";
+import { back } from "@zos/router";
+import { createModal, MODAL_CONFIRM } from "@zos/interaction";
 // import { TEXT_STYLE } from "zosLoader:./index.page.[pf].layout.js";
 import { DISPLAY_PIXEL_COUNT_X, packVram } from "../../../utils/display";
 import * as cpu from "../../../utils/cpu";
 import { ROM } from "../../../utils/rom";
 import { ToneGenerator } from "../../../utils/tone-generator";
 import { ROM_LIST } from "../../../utils/rom-config";
+import {
+  hasSaveState,
+  writeSaveState,
+  readSaveState,
+} from "../../../utils/save-state";
 
 const logger = Logger.getLogger("vpet-emu");
 
@@ -64,6 +71,7 @@ const buttons = {
 
 Page({
   state: {
+    romId: undefined,
     cpu: undefined,
     clockCounter: 0,
     clocksPerSecond: 0,
@@ -74,6 +82,7 @@ Page({
     displayInterval: undefined,
     iconInterval: undefined,
     stateInterval: undefined,
+    saveInterval: undefined,
   },
   onInit(params) {
     logger.debug("page onInit invoked");
@@ -87,10 +96,28 @@ Page({
     const toneGenerator = new ToneGenerator();
     cpu.initCPU(rom, romConfig.clockHz, toneGenerator);
 
+    this.state.romId = romId;
+    if (hasSaveState(romId)) {
+      try {
+        cpu.loadState(readSaveState(romId));
+      } catch (e) {
+        logger.error("failed to load save state: " + e.message);
+        const modal = createModal({
+          content: "Save state could not be loaded. Start fresh?",
+          onClick(key) {
+            if (key.type !== MODAL_CONFIRM) {
+              back();
+            }
+          },
+        });
+        modal.show(true);
+      }
+    }
+
     const state = this.state;
     state.cpu = cpu;
 
-    const INTERVAL_MS = 20;
+    const CLOCK_INTERVAL_MS = 20;
     const TARGET_FRACTION = 0.8;
     let batchSize = 8;
     state.updateInterval = setInterval(() => {
@@ -102,14 +129,23 @@ Page({
         const msPerClock = elapsed / batchSize;
         batchSize = Math.max(
           1,
-          Math.floor((INTERVAL_MS * TARGET_FRACTION) / msPerClock),
+          Math.floor((CLOCK_INTERVAL_MS * TARGET_FRACTION) / msPerClock),
         );
         state.msPerClock = 0.9 * state.msPerClock + 0.1 * msPerClock;
       } else {
         batchSize *= 2;
       }
       state.batchSize = batchSize;
-    }, INTERVAL_MS);
+    }, CLOCK_INTERVAL_MS);
+
+    const SAVE_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
+    state.saveInterval = setInterval(() => {
+      try {
+        writeSaveState(state.romId, cpu.saveState());
+      } catch (e) {
+        logger.error("failed to write save state: " + e.message);
+      }
+    }, SAVE_INTERVAL_MS);
 
     let lastReset = Date.now();
     state.clockCounterInterval = setInterval(() => {
@@ -147,6 +183,12 @@ Page({
     clearInterval(this.state.iconInterval);
     clearInterval(this.state.updateInterval);
     clearInterval(this.state.clockCounterInterval);
+    clearInterval(this.state.saveInterval);
+    try {
+      writeSaveState(this.state.romId, cpu.saveState());
+    } catch (e) {
+      logger.error("failed to write save state: " + e.message);
+    }
   },
   _buildDebugUI() {
     const batchText = createWidget(widget.TEXT, {
@@ -290,7 +332,7 @@ Page({
     });
 
     const state = this.state;
-    this.state.displayInterval = setInterval(() => {
+    const updateDisplay = () => {
       const buf = displayBuffers[displayBufferIndex];
       packVram(state.cpu.get_VRAM_words(), buf);
 
@@ -342,7 +384,9 @@ Page({
       if (hasDiff) {
         displayBufferIndex = (displayBufferIndex + 1) % 2;
       }
-    }, 50);
+    };
+    updateDisplay();
+    this.state.displayInterval = setInterval(updateDisplay, 50);
   },
   _buildIconsUI() {
     createWidget(widget.FILL_RECT, {
@@ -386,14 +430,16 @@ Page({
     }
 
     const state = this.state;
-    this.state.iconInterval = setInterval(() => {
+    const updateIcons = () => {
       const vram = state.cpu.get_VRAM();
       for (let iconIndex = 0; iconIndex < 8; iconIndex += 1) {
         const def = ICON_DEFS[iconIndex];
         const isOn = (vram[def.nibble] >> def.bit) & 1;
         iconWidgets[iconIndex].setProperty(prop.VISIBLE, isOn !== 0);
       }
-    }, 50);
+    };
+    updateIcons();
+    this.state.iconInterval = setInterval(updateIcons, 50);
   },
   _buildButtonsUI() {
     const state = this.state;

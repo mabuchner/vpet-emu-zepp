@@ -27,7 +27,8 @@
         "page": {
           "pages": [
             "page/gt/rom-select/index.page",
-            "page/gt/emulator/index.page"
+            "page/gt/emulator/index.page",
+            "page/gt/rom-config/index.page"
           ]
         }
       },

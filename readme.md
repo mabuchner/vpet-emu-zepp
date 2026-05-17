@@ -22,7 +22,7 @@ This emulator is a work in progress, with many limitations:
 - ✅ Tested only on Amazfit T-Rex 3.
 - ⏱️ Emulation speed varies by device; close to full speed on Amazfit T-Rex 3.
 - 🔇 Sound is not implemented.
-- 💾 No save states - restarting the app resets progress.
+- 💾 Progress is saved automatically when leaving the emulator and every 5 minutes, and restored when re-selecting a ROM. Use the **...** button next to a ROM to open its configuration menu, where you can reset the save state.
 
 ## 🔧 Build & Run
 
