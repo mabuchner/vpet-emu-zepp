@@ -6,8 +6,13 @@ import {
   pausePalmScreenOff,
   setWakeUpRelaunch,
 } from "@zos/display";
+import { readFileSync } from "@zos/fs";
 // import { TEXT_STYLE } from "zosLoader:./index.page.[pf].layout.js";
 import { DISPLAY_PIXEL_COUNT_X, packVram } from "../../../utils/display";
+import * as cpu from "../../../utils/cpu";
+import { ROM } from "../../../utils/rom";
+import { ToneGenerator } from "../../../utils/tone-generator";
+import { ROM_LIST } from "../../../utils/rom-config";
 
 const logger = Logger.getLogger("vpet-emu");
 
@@ -62,9 +67,58 @@ Page({
     stateInterval: undefined,
     displayInterval: undefined,
     iconInterval: undefined,
+    cpu: undefined,
+    updateInterval: undefined,
+    clockCounterInterval: undefined,
+    clockCounter: 0,
+    clocksPerSecond: 0,
+    batchSize: 0,
+    msPerClock: 0,
   },
-  onInit() {
+  onInit(params) {
     logger.debug("page onInit invoked");
+
+    const { romId } = JSON.parse(params);
+    const romConfig = ROM_LIST.find((r) => r.id === romId);
+
+    const buffer = readFileSync({ path: "assets://raw/" + romConfig.file });
+    const data = new Uint8Array(buffer);
+    const rom = new ROM(data);
+    const toneGenerator = new ToneGenerator();
+    cpu.initCPU(rom, romConfig.clockHz, toneGenerator);
+
+    const state = this.state;
+    state.cpu = cpu;
+
+    const INTERVAL_MS = 20;
+    const TARGET_FRACTION = 0.8;
+    let batchSize = 8;
+    state.updateInterval = setInterval(() => {
+      const startTime = Date.now();
+      cpu.clockBatch(batchSize);
+      state.clockCounter += batchSize;
+      const elapsed = Date.now() - startTime;
+      if (elapsed > 0) {
+        const msPerClock = elapsed / batchSize;
+        batchSize = Math.max(
+          1,
+          Math.floor((INTERVAL_MS * TARGET_FRACTION) / msPerClock),
+        );
+        state.msPerClock = 0.9 * state.msPerClock + 0.1 * msPerClock;
+      } else {
+        batchSize *= 2;
+      }
+      state.batchSize = batchSize;
+    }, INTERVAL_MS);
+
+    let lastReset = Date.now();
+    state.clockCounterInterval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - lastReset;
+      lastReset = now;
+      state.clocksPerSecond = (state.clockCounter / elapsed) * 1000;
+      state.clockCounter = 0;
+    }, 1000);
   },
   build() {
     logger.debug("page build invoked");
@@ -91,6 +145,8 @@ Page({
     clearInterval(this.state.displayInterval);
     clearInterval(this.state.stateInterval);
     clearInterval(this.state.iconInterval);
+    clearInterval(this.state.updateInterval);
+    clearInterval(this.state.clockCounterInterval);
   },
   _buildDebugUI() {
     const batchText = createWidget(widget.TEXT, {
@@ -183,17 +239,11 @@ Page({
       text_size: 15,
     });
 
+    const state = this.state;
     this.state.stateInterval = setInterval(() => {
-      const app = getApp();
-      const cpuModule = app._options.globalData.cpu;
-      clockMS.setProperty(
-        prop.TEXT,
-        `${app._options.globalData.msPerClock.toFixed(3)}ms`,
-      );
-      batchText.setProperty(
-        prop.TEXT,
-        `batch ${app._options.globalData.batchSize}`,
-      );
+      const cpuModule = state.cpu;
+      clockMS.setProperty(prop.TEXT, `${state.msPerClock.toFixed(3)}ms`);
+      batchText.setProperty(prop.TEXT, `batch ${state.batchSize}`);
       pcText.setProperty(
         prop.TEXT,
         `PC 0x${cpuModule.pc().toString(16).padStart(4, "0")}`,
@@ -239,9 +289,10 @@ Page({
       color: 0x999999,
     });
 
+    const state = this.state;
     this.state.displayInterval = setInterval(() => {
       const buf = displayBuffers[displayBufferIndex];
-      packVram(getApp()._options.globalData.cpu.get_VRAM_words(), buf);
+      packVram(state.cpu.get_VRAM_words(), buf);
 
       const previousBuf = displayBuffers[(displayBufferIndex + 1) % 2];
       let hasDiff = false;
@@ -334,8 +385,9 @@ Page({
       );
     }
 
+    const state = this.state;
     this.state.iconInterval = setInterval(() => {
-      const vram = getApp()._options.globalData.cpu.get_VRAM();
+      const vram = state.cpu.get_VRAM();
       for (let iconIndex = 0; iconIndex < 8; iconIndex += 1) {
         const def = ICON_DEFS[iconIndex];
         const isOn = (vram[def.nibble] >> def.bit) & 1;
@@ -344,13 +396,15 @@ Page({
     }, 50);
   },
   _buildButtonsUI() {
+    const state = this.state;
+
     const pressButton = (port, pin, level) => {
-      getApp()._options.globalData.cpu.pin_set(port, pin, level);
+      state.cpu.pin_set(port, pin, level);
       logger.log(`button down (port=${port}, pin=${pin}, level=${level})`);
     };
 
     const releaseButton = (port, pin) => {
-      getApp()._options.globalData.cpu.pin_release(port, pin);
+      state.cpu.pin_release(port, pin);
       logger.log(`button up (port=${port}, pin=${pin})`);
     };
 

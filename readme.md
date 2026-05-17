@@ -18,6 +18,7 @@ The implementation heavily inspired by
 This emulator is a work in progress, with many limitations:
 
 - ✅ Only Tamagotchi P1 is known to run successfully.
+- 🖼️ Status icons use the Tamagotchi P1 layout for all ROMs.
 - ✅ Tested only on Amazfit T-Rex 3.
 - ⏱️ Emulation speed varies by device; close to full speed on Amazfit T-Rex 3.
 - 🔇 Sound is not implemented.
@@ -36,9 +37,31 @@ git clone https://github.com/mabuchner/vpet-emu-zepp.git
 cd vpet-emu-zepp
 ```
 
-### 3. Add Your ROM File
+### 3. Add Your ROM Files
 
-Copy your ROM file to `./assets/raw/TamagotchiP1.bin`.
+Copy your ROM files to `./assets/raw/`. The emulator looks for the following
+filenames:
+
+| File                      | Device                |
+| ------------------------- | --------------------- |
+| `TamagotchiP1.bin`        | Tamagotchi P1         |
+| `TamagotchiP1J.bin`       | Tamagotchi P1 (JP)    |
+| `TamagotchiP2.bin`        | Tamagotchi P2         |
+| `TamagotchiAngel.bin`     | Tamagotchi Angel      |
+| `TamagotchiMorino.bin`    | Tamagotchi Morino     |
+| `TamagotchiUmino.bin`     | Tamagotchi Umino      |
+| `TamagotchiMothra.bin`    | Tamagotchi Mothra     |
+| `TamagotchiGenjintch.bin` | Tamagotchi Genjintch  |
+| `TamagotchiTamaotch.bin`  | Tamaotch              |
+| `DigimonV1ES.bin`         | Digimon Ver. 1 (EU)   |
+| `DigimonV1JA.bin`         | Digimon Ver. 1 (JP-A) |
+| `DigimonV1JB.bin`         | Digimon Ver. 1 (JP-B) |
+| `DigimonV2J.bin`          | Digimon Ver. 2 (JP)   |
+| `DigimonV3J.bin`          | Digimon Ver. 3 (JP)   |
+| `DigimonV4J.bin`          | Digimon Ver. 4 (JP)   |
+
+You do not need all files — entries for missing ROMs are shown greyed out in
+the selection screen and cannot be launched.
 
 ### 4. Run in Simulator
 
