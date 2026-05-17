@@ -10,7 +10,9 @@ import {
   ITEM_H,
   ITEM_RADIUS,
   ITEM_TEXT_SIZE,
-  ITEM_W,
+  MENU_BTN_GAP,
+  MENU_BTN_W,
+  ROM_BTN_W,
   ITEM_X,
   LIST_TOP,
   TITLE_STYLE,
@@ -28,10 +30,11 @@ Page({
 
     ROM_LIST.forEach((rom, index) => {
       const available = romFileExists(rom.file);
+      const itemY = LIST_TOP + index * (ITEM_H + ITEM_GAP);
       const btn = createWidget(widget.BUTTON, {
         x: ITEM_X,
-        y: LIST_TOP + index * (ITEM_H + ITEM_GAP),
-        w: ITEM_W,
+        y: itemY,
+        w: ROM_BTN_W,
         h: ITEM_H,
         text: rom.name,
         color: available ? 0xffffff : 0x666666,
@@ -49,6 +52,24 @@ Page({
         } else {
           showToast({ content: "Copy " + rom.file + " to assets/raw/" });
         }
+      });
+      const menuBtn = createWidget(widget.BUTTON, {
+        x: ITEM_X + ROM_BTN_W + MENU_BTN_GAP,
+        y: itemY,
+        w: MENU_BTN_W,
+        h: ITEM_H,
+        text: "...",
+        color: 0xffffff,
+        normal_color: 0x333333,
+        press_color: 0x555555,
+        radius: ITEM_RADIUS,
+        text_size: ITEM_TEXT_SIZE,
+      });
+      menuBtn.addEventListener(event.CLICK_UP, () => {
+        push({
+          url: "page/gt/rom-config/index.page",
+          params: JSON.stringify({ romId: rom.id, romName: rom.name }),
+        });
       });
     });
 

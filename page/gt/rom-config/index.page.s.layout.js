@@ -7,20 +7,14 @@ export const { width: DEVICE_WIDTH } = getDeviceInfo();
 const TOP_PADDING = px(24);
 const TITLE_H = px(72);
 
-export const LIST_TOP = TOP_PADDING + TITLE_H;
+export const CONTENT_TOP = TOP_PADDING + TITLE_H;
 export const ITEM_H = px(96);
-export const ITEM_GAP = px(4);
 export const ITEM_X = px(16);
 export const ITEM_W = DEVICE_WIDTH - ITEM_X * 2;
-export const MENU_BTN_W = px(72);
-export const MENU_BTN_GAP = px(8);
-export const ROM_BTN_W = ITEM_W - MENU_BTN_W - MENU_BTN_GAP;
 export const ITEM_TEXT_SIZE = px(28);
 export const ITEM_RADIUS = px(8);
-export const BOTTOM_PADDING = px(120);
 
 export const TITLE_STYLE = {
-  text: "Select ROM",
   x: 0,
   y: TOP_PADDING,
   w: DEVICE_WIDTH,

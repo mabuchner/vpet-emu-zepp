@@ -234,9 +234,9 @@ let _TM, _SWL, _SWH, _PT, _RD, _SD;
 let _K0, _DFK0, _K1;
 let _R0, _R1, _R2, _R3, _R4;
 let _P0, _P1, _P2, _P3;
-let _CTRL_OSC, _CTRL_LCD, _LC, _CTRL_SVD; // eslint-disable-line no-unused-vars
+let _CTRL_OSC, _CTRL_LCD, _LC, _CTRL_SVD;
 let _CTRL_BZ1, _CTRL_BZ2, _CTRL_SW, _CTRL_PT;
-let _PTC, _SC, _HZR, _IOC, _PUP; // eslint-disable-line no-unused-vars
+let _PTC, _SC, _HZR, _IOC, _PUP;
 
 export function initCPU(rom, clock, toneGenerator) {
   _ROM = rom;
@@ -582,6 +582,192 @@ export function reset() {
   _stopwatch_counter = 0;
   sound.set_buzzer_off();
   sound.set_envelope_off();
+}
+
+const SAVE_STATE_MAGIC = [0x56, 0x50, 0x45, 0x54]; // "VPET"
+const SAVE_STATE_VERSION = 1;
+const SAVE_STATE_SIZE = 1013;
+
+export function saveState() {
+  const buf = new ArrayBuffer(SAVE_STATE_SIZE);
+  const view = new DataView(buf);
+  const bytes = new Uint8Array(buf);
+  let offset = 0;
+
+  for (let i = 0; i < SAVE_STATE_MAGIC.length; i += 1) {
+    bytes[offset++] = SAVE_STATE_MAGIC[i];
+  }
+  bytes[offset++] = SAVE_STATE_VERSION;
+  bytes[offset++] = _A;
+  bytes[offset++] = _B;
+  bytes[offset++] = _SP;
+  bytes[offset++] = _CF;
+  bytes[offset++] = _ZF;
+  bytes[offset++] = _DF;
+  bytes[offset++] = _IF;
+  bytes[offset++] = _HALT;
+  bytes[offset++] = _if_delay ? 1 : 0;
+  bytes[offset++] = _P0_OUTPUT_DATA;
+  bytes[offset++] = _P1_OUTPUT_DATA;
+  bytes[offset++] = _P2_OUTPUT_DATA;
+  bytes[offset++] = _P3_OUTPUT_DATA;
+  bytes[offset++] = _IT;
+  bytes[offset++] = _ISW;
+  bytes[offset++] = _IPT;
+  bytes[offset++] = _ISIO;
+  bytes[offset++] = _IK0;
+  bytes[offset++] = _IK1;
+  bytes[offset++] = _EIT;
+  bytes[offset++] = _EISW;
+  bytes[offset++] = _EIPT;
+  bytes[offset++] = _EISIO;
+  bytes[offset++] = _EIK0;
+  bytes[offset++] = _EIK1;
+  bytes[offset++] = _TM;
+  bytes[offset++] = _SWL;
+  bytes[offset++] = _SWH;
+  bytes[offset++] = _PT;
+  bytes[offset++] = _RD;
+  bytes[offset++] = _SD;
+  bytes[offset++] = _K0;
+  bytes[offset++] = _DFK0;
+  bytes[offset++] = _K1;
+  bytes[offset++] = _R0;
+  bytes[offset++] = _R1;
+  bytes[offset++] = _R2;
+  bytes[offset++] = _R3;
+  bytes[offset++] = _R4;
+  bytes[offset++] = _P0;
+  bytes[offset++] = _P1;
+  bytes[offset++] = _P2;
+  bytes[offset++] = _P3;
+  bytes[offset++] = _CTRL_OSC;
+  bytes[offset++] = _CTRL_LCD;
+  bytes[offset++] = _LC;
+  bytes[offset++] = _CTRL_SVD;
+  bytes[offset++] = _CTRL_BZ1;
+  bytes[offset++] = _CTRL_BZ2;
+  bytes[offset++] = _CTRL_SW;
+  bytes[offset++] = _CTRL_PT;
+  bytes[offset++] = _PTC;
+  bytes[offset++] = _SC;
+  bytes[offset++] = _HZR;
+  bytes[offset++] = _IOC;
+  bytes[offset++] = _PUP;
+  view.setUint16(offset, _IX, true);
+  offset += 2;
+  view.setUint16(offset, _IY, true);
+  offset += 2;
+  view.setUint16(offset, _PC, true);
+  offset += 2;
+  view.setUint16(offset, _NPC, true);
+  offset += 2;
+  view.setUint32(offset, _OSC1_counter, true);
+  offset += 4;
+  view.setUint32(offset, _timer_counter, true);
+  offset += 4;
+  view.setUint32(offset, _ptimer_counter, true);
+  offset += 4;
+  view.setUint32(offset, _stopwatch_counter, true);
+  offset += 4;
+  bytes.set(_RAM, offset);
+  offset += RAM_SIZE;
+  bytes.set(_VRAM, offset);
+
+  return bytes;
+}
+
+export function loadState(buf) {
+  if (buf.byteLength < SAVE_STATE_SIZE) {
+    throw new Error("save state too short");
+  }
+  const bytes = new Uint8Array(buf);
+  const view = new DataView(buf);
+  let offset = 0;
+
+  for (let i = 0; i < SAVE_STATE_MAGIC.length; i += 1) {
+    if (bytes[offset++] !== SAVE_STATE_MAGIC[i]) {
+      throw new Error("invalid save state file");
+    }
+  }
+  if (bytes[offset++] !== SAVE_STATE_VERSION) {
+    throw new Error("unsupported save state version");
+  }
+  _A = bytes[offset++];
+  _B = bytes[offset++];
+  _SP = bytes[offset++];
+  _CF = bytes[offset++];
+  _ZF = bytes[offset++];
+  _DF = bytes[offset++];
+  _IF = bytes[offset++];
+  _HALT = bytes[offset++];
+  _if_delay = bytes[offset++] !== 0;
+  _P0_OUTPUT_DATA = bytes[offset++];
+  _P1_OUTPUT_DATA = bytes[offset++];
+  _P2_OUTPUT_DATA = bytes[offset++];
+  _P3_OUTPUT_DATA = bytes[offset++];
+  _IT = bytes[offset++];
+  _ISW = bytes[offset++];
+  _IPT = bytes[offset++];
+  _ISIO = bytes[offset++];
+  _IK0 = bytes[offset++];
+  _IK1 = bytes[offset++];
+  _EIT = bytes[offset++];
+  _EISW = bytes[offset++];
+  _EIPT = bytes[offset++];
+  _EISIO = bytes[offset++];
+  _EIK0 = bytes[offset++];
+  _EIK1 = bytes[offset++];
+  _TM = bytes[offset++];
+  _SWL = bytes[offset++];
+  _SWH = bytes[offset++];
+  _PT = bytes[offset++];
+  _RD = bytes[offset++];
+  _SD = bytes[offset++];
+  _K0 = bytes[offset++];
+  _DFK0 = bytes[offset++];
+  _K1 = bytes[offset++];
+  _R0 = bytes[offset++];
+  _R1 = bytes[offset++];
+  _R2 = bytes[offset++];
+  _R3 = bytes[offset++];
+  _R4 = bytes[offset++];
+  _P0 = bytes[offset++];
+  _P1 = bytes[offset++];
+  _P2 = bytes[offset++];
+  _P3 = bytes[offset++];
+  _CTRL_OSC = bytes[offset++];
+  _CTRL_LCD = bytes[offset++];
+  _LC = bytes[offset++];
+  _CTRL_SVD = bytes[offset++];
+  _CTRL_BZ1 = bytes[offset++];
+  _CTRL_BZ2 = bytes[offset++];
+  _CTRL_SW = bytes[offset++];
+  _CTRL_PT = bytes[offset++];
+  _PTC = bytes[offset++];
+  _SC = bytes[offset++];
+  _HZR = bytes[offset++];
+  _IOC = bytes[offset++];
+  _PUP = bytes[offset++];
+  _IX = view.getUint16(offset, true);
+  offset += 2;
+  _IY = view.getUint16(offset, true);
+  offset += 2;
+  _PC = view.getUint16(offset, true);
+  offset += 2;
+  _NPC = view.getUint16(offset, true);
+  offset += 2;
+  _OSC1_counter = view.getUint32(offset, true);
+  offset += 4;
+  _timer_counter = view.getUint32(offset, true);
+  offset += 4;
+  _ptimer_counter = view.getUint32(offset, true);
+  offset += 4;
+  _stopwatch_counter = view.getUint32(offset, true);
+  offset += 4;
+  _RAM.set(bytes.subarray(offset, offset + RAM_SIZE));
+  offset += RAM_SIZE;
+  _VRAM.set(bytes.subarray(offset, offset + VRAM_SIZE));
 }
 
 function _get_io_dummy() {
