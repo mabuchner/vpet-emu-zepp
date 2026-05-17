@@ -1,0 +1,92 @@
+export const ROM_LIST = [
+  {
+    id: "tama-p1",
+    name: "Tamagotchi P1",
+    file: "TamagotchiP1.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-p1j",
+    name: "Tamagotchi P1 (JP)",
+    file: "TamagotchiP1J.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-p2",
+    name: "Tamagotchi P2",
+    file: "TamagotchiP2.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-angel",
+    name: "Tamagotchi Angel",
+    file: "TamagotchiAngel.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-morino",
+    name: "Tamagotchi Morino",
+    file: "TamagotchiMorino.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-umino",
+    name: "Tamagotchi Umino",
+    file: "TamagotchiUmino.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-mothra",
+    name: "Tamagotchi Mothra",
+    file: "TamagotchiMothra.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-genjintch",
+    name: "Tamagotchi Genjintch",
+    file: "TamagotchiGenjintch.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "tama-tamaotch",
+    name: "Tamaotch",
+    file: "TamagotchiTamaotch.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "digi-v1-eu",
+    name: "Digimon Ver. 1 (EU)",
+    file: "DigimonV1ES.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "digi-v1-ja",
+    name: "Digimon Ver. 1 (JP-A)",
+    file: "DigimonV1JA.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "digi-v1-jb",
+    name: "Digimon Ver. 1 (JP-B)",
+    file: "DigimonV1JB.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "digi-v2",
+    name: "Digimon Ver. 2 (JP)",
+    file: "DigimonV2J.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "digi-v3",
+    name: "Digimon Ver. 3 (JP)",
+    file: "DigimonV3J.bin",
+    clockHz: 1600000,
+  },
+  {
+    id: "digi-v4",
+    name: "Digimon Ver. 4 (JP)",
+    file: "DigimonV4J.bin",
+    clockHz: 1600000,
+  },
+];
