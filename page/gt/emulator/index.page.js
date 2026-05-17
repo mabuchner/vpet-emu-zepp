@@ -376,7 +376,7 @@ Page({
             y1: runStart * DISPLAY_PIXEL_SIZE,
             x2: x2,
             y2: y * DISPLAY_PIXEL_SIZE,
-            color: 0x333333,
+            color: 0x111111,
           });
         }
       }
