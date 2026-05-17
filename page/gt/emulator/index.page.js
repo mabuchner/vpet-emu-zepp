@@ -64,16 +64,16 @@ const buttons = {
 
 Page({
   state: {
-    stateInterval: undefined,
-    displayInterval: undefined,
-    iconInterval: undefined,
     cpu: undefined,
-    updateInterval: undefined,
-    clockCounterInterval: undefined,
     clockCounter: 0,
     clocksPerSecond: 0,
     batchSize: 0,
     msPerClock: 0,
+    updateInterval: undefined,
+    clockCounterInterval: undefined,
+    displayInterval: undefined,
+    iconInterval: undefined,
+    stateInterval: undefined,
   },
   onInit(params) {
     logger.debug("page onInit invoked");
