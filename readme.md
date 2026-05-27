@@ -87,3 +87,27 @@ Generate a QR code and scan it with the Zepp App on your phone:
 ```sh
 zeus preview
 ```
+
+## Architecture: Device App, Side Service, and Settings App
+
+Zepp OS apps consist of up to three components that run on separate runtimes. This project uses all three.
+
+```
+┌─────────────────────────┐        ┌──────────────────────────────────┐
+│        Watch            │  BLE   │           Phone (Zepp App)       │
+│                         │◄──────►│                                  │
+│  Device App             │        │  Side Service   Settings App     │
+└─────────────────────────┘        └──────────────────────────────────┘
+```
+
+**Device App** (`page/`) runs on the watch and handles the UI.
+
+**Settings App** (`setting/`) renders a configuration UI inside the Zepp companion app. Settings are written to a shared Settings Storage on the phone.
+
+**Side Service** (`app-side/`) runs inside the Zepp companion app and acts as a bridge — the Settings App and Device App cannot communicate directly. It listens for settings changes and pushes them to the watch over BLE. It can also respond to requests from the watch.
+
+### Data flow for the debug UI setting
+
+1. User toggles "Debug UI" in the Settings App → written to Settings Storage on the phone.
+2. When the rom-select page opens, it requests the current setting from the Side Service over BLE and caches the result on the watch.
+3. The emulator reads the cached value on startup to decide whether to render the debug overlay.
