@@ -27,4 +27,23 @@ export default defineConfig([
       },
     },
   },
+  {
+    files: ["setting/**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        AppSettingsPage: "readonly",
+        Section: "readonly",
+        Toggle: "readonly",
+      },
+    },
+  },
+  {
+    files: ["app-side/**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        AppSideService: "readonly",
+        Logger: "readonly",
+      },
+    },
+  },
 ]);

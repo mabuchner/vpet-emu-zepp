@@ -30,6 +30,12 @@
             "page/gt/emulator/index.page",
             "page/gt/rom-config/index.page"
           ]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        },
+        "setting": {
+          "path": "setting/index"
         }
       },
       "platforms": [

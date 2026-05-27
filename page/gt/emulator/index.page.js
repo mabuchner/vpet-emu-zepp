@@ -1,5 +1,6 @@
 import { createWidget, event, prop, widget } from "@zos/ui";
 import { log as Logger } from "@zos/utils";
+import { BasePage } from "@zeppos/zml/base-page";
 import {
   setPageBrightTime,
   pauseDropWristScreenOff,
@@ -20,6 +21,11 @@ import {
   writeSaveState,
   readSaveState,
 } from "../../../utils/save-state";
+import {
+  getDebugUIEnabled,
+  setDebugUIEnabled,
+} from "../../../utils/app-settings";
+import { MSG_SETTINGS_UPDATE } from "../../../utils/messaging.js";
 
 const logger = Logger.getLogger("vpet-emu");
 
@@ -69,483 +75,493 @@ const buttons = {
   },
 };
 
-Page({
-  state: {
-    romId: undefined,
-    cpu: undefined,
-    clockCounter: 0,
-    clocksPerSecond: 0,
-    batchSize: 0,
-    msPerClock: 0,
-    updateInterval: undefined,
-    clockCounterInterval: undefined,
-    displayInterval: undefined,
-    iconInterval: undefined,
-    stateInterval: undefined,
-    saveInterval: undefined,
-  },
-  onInit(params) {
-    logger.debug("page onInit invoked");
+Page(
+  BasePage({
+    name: "vpet-emulator",
+    state: {
+      romId: undefined,
+      cpu: undefined,
+      clockCounter: 0,
+      clocksPerSecond: 0,
+      batchSize: 0,
+      msPerClock: 0,
+      updateInterval: undefined,
+      clockCounterInterval: undefined,
+      displayInterval: undefined,
+      iconInterval: undefined,
+      stateInterval: undefined,
+      saveInterval: undefined,
+    },
+    onInit(params) {
+      logger.debug("page onInit invoked");
 
-    const { romId } = JSON.parse(params);
-    const romConfig = ROM_LIST.find((r) => r.id === romId);
+      const { romId } = JSON.parse(params);
+      const romConfig = ROM_LIST.find((r) => r.id === romId);
 
-    const buffer = readFileSync({ path: "assets://raw/" + romConfig.file });
-    const data = new Uint8Array(buffer);
-    const rom = new ROM(data);
-    const toneGenerator = new ToneGenerator();
-    cpu.initCPU(rom, romConfig.clockHz, toneGenerator);
+      const buffer = readFileSync({ path: "assets://raw/" + romConfig.file });
+      const data = new Uint8Array(buffer);
+      const rom = new ROM(data);
+      const toneGenerator = new ToneGenerator();
+      cpu.initCPU(rom, romConfig.clockHz, toneGenerator);
 
-    this.state.romId = romId;
-    if (hasSaveState(romId)) {
-      try {
-        cpu.loadState(readSaveState(romId));
-      } catch (e) {
-        logger.error("failed to load save state: " + e.message);
-        const modal = createModal({
-          content: "Save state could not be loaded. Start fresh?",
-          onClick(key) {
-            if (key.type !== MODAL_CONFIRM) {
-              back();
-            }
-          },
-        });
-        modal.show(true);
+      this.state.romId = romId;
+      if (hasSaveState(romId)) {
+        try {
+          cpu.loadState(readSaveState(romId));
+        } catch (e) {
+          logger.error("failed to load save state: " + e.message);
+          const modal = createModal({
+            content: "Save state could not be loaded. Start fresh?",
+            onClick(key) {
+              if (key.type !== MODAL_CONFIRM) {
+                back();
+              }
+            },
+          });
+          modal.show(true);
+        }
       }
-    }
 
-    const state = this.state;
-    state.cpu = cpu;
+      const state = this.state;
+      state.cpu = cpu;
 
-    const CLOCK_INTERVAL_MS = 20;
-    const TARGET_FRACTION = 0.8;
-    let batchSize = 8;
-    state.updateInterval = setInterval(() => {
-      const startTime = Date.now();
-      cpu.clockBatch(batchSize);
-      state.clockCounter += batchSize;
-      const elapsed = Date.now() - startTime;
-      if (elapsed > 0) {
-        const msPerClock = elapsed / batchSize;
-        batchSize = Math.max(
-          1,
-          Math.floor((CLOCK_INTERVAL_MS * TARGET_FRACTION) / msPerClock),
-        );
-        state.msPerClock = 0.9 * state.msPerClock + 0.1 * msPerClock;
-      } else {
-        batchSize *= 2;
+      const CLOCK_INTERVAL_MS = 20;
+      const TARGET_FRACTION = 0.8;
+      let batchSize = 8;
+      state.updateInterval = setInterval(() => {
+        const startTime = Date.now();
+        cpu.clockBatch(batchSize);
+        state.clockCounter += batchSize;
+        const elapsed = Date.now() - startTime;
+        if (elapsed > 0) {
+          const msPerClock = elapsed / batchSize;
+          batchSize = Math.max(
+            1,
+            Math.floor((CLOCK_INTERVAL_MS * TARGET_FRACTION) / msPerClock),
+          );
+          state.msPerClock = 0.9 * state.msPerClock + 0.1 * msPerClock;
+        } else {
+          batchSize *= 2;
+        }
+        state.batchSize = batchSize;
+      }, CLOCK_INTERVAL_MS);
+
+      const SAVE_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
+      state.saveInterval = setInterval(() => {
+        try {
+          writeSaveState(state.romId, cpu.saveState());
+        } catch (e) {
+          logger.error("failed to write save state: " + e.message);
+        }
+      }, SAVE_INTERVAL_MS);
+
+      let lastReset = Date.now();
+      state.clockCounterInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - lastReset;
+        lastReset = now;
+        state.clocksPerSecond = (state.clockCounter / elapsed) * 1000;
+        state.clockCounter = 0;
+      }, 1000);
+    },
+    build() {
+      logger.debug("page build invoked");
+      setPageBrightTime({
+        brightTime: 30 * 60 * 1000, // 30 minutes
+      });
+      pauseDropWristScreenOff({
+        duration: 0,
+      });
+      pausePalmScreenOff({
+        duration: 0,
+      });
+      setWakeUpRelaunch({
+        relaunch: true,
+      });
+
+      if (getDebugUIEnabled()) {
+        this._buildDebugUI();
       }
-      state.batchSize = batchSize;
-    }, CLOCK_INTERVAL_MS);
-
-    const SAVE_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
-    state.saveInterval = setInterval(() => {
+      this._buildDisplayUI();
+      this._buildIconsUI();
+      this._buildButtonsUI();
+    },
+    onDestroy() {
+      logger.debug("page onDestroy invoked");
+      clearInterval(this.state.displayInterval);
+      clearInterval(this.state.stateInterval);
+      clearInterval(this.state.iconInterval);
+      clearInterval(this.state.updateInterval);
+      clearInterval(this.state.clockCounterInterval);
+      clearInterval(this.state.saveInterval);
       try {
-        writeSaveState(state.romId, cpu.saveState());
+        writeSaveState(this.state.romId, cpu.saveState());
       } catch (e) {
         logger.error("failed to write save state: " + e.message);
       }
-    }, SAVE_INTERVAL_MS);
+    },
+    onCall(data) {
+      if (data.type === MSG_SETTINGS_UPDATE) {
+        setDebugUIEnabled(data.debugUI);
+      }
+    },
+    _buildDebugUI() {
+      const batchText = createWidget(widget.TEXT, {
+        text: "batch 0",
+        x: 140,
+        y: 30,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    let lastReset = Date.now();
-    state.clockCounterInterval = setInterval(() => {
-      const now = Date.now();
-      const elapsed = now - lastReset;
-      lastReset = now;
-      state.clocksPerSecond = (state.clockCounter / elapsed) * 1000;
-      state.clockCounter = 0;
-    }, 1000);
-  },
-  build() {
-    logger.debug("page build invoked");
-    setPageBrightTime({
-      brightTime: 30 * 60 * 1000, // 30 minutes
-    });
-    pauseDropWristScreenOff({
-      duration: 0,
-    });
-    pausePalmScreenOff({
-      duration: 0,
-    });
-    setWakeUpRelaunch({
-      relaunch: true,
-    });
+      const clockMS = createWidget(widget.TEXT, {
+        text: "0ms",
+        x: 280,
+        y: 30,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    this._buildDebugUI();
-    this._buildDisplayUI();
-    this._buildIconsUI();
-    this._buildButtonsUI();
-  },
-  onDestroy() {
-    logger.debug("page onDestroy invoked");
-    clearInterval(this.state.displayInterval);
-    clearInterval(this.state.stateInterval);
-    clearInterval(this.state.iconInterval);
-    clearInterval(this.state.updateInterval);
-    clearInterval(this.state.clockCounterInterval);
-    clearInterval(this.state.saveInterval);
-    try {
-      writeSaveState(this.state.romId, cpu.saveState());
-    } catch (e) {
-      logger.error("failed to write save state: " + e.message);
-    }
-  },
-  _buildDebugUI() {
-    const batchText = createWidget(widget.TEXT, {
-      text: "batch 0",
-      x: 140,
-      y: 30,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const pcText = createWidget(widget.TEXT, {
+        text: "PC 0x0000",
+        x: 100,
+        y: 60,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const clockMS = createWidget(widget.TEXT, {
-      text: "0ms",
-      x: 280,
-      y: 30,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const npcText = createWidget(widget.TEXT, {
+        text: "NPC 0x0000",
+        x: 200,
+        y: 60,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const pcText = createWidget(widget.TEXT, {
-      text: "PC 0x0000",
-      x: 100,
-      y: 60,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const spText = createWidget(widget.TEXT, {
+        text: "SP 0x00",
+        x: 300,
+        y: 60,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const npcText = createWidget(widget.TEXT, {
-      text: "NPC 0x0000",
-      x: 200,
-      y: 60,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const aText = createWidget(widget.TEXT, {
+        text: "A 0x0",
+        x: 390,
+        y: 160,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const spText = createWidget(widget.TEXT, {
-      text: "SP 0x00",
-      x: 300,
-      y: 60,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const bText = createWidget(widget.TEXT, {
+        text: "B 0x0",
+        x: 390,
+        y: 190,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const aText = createWidget(widget.TEXT, {
-      text: "A 0x0",
-      x: 390,
-      y: 160,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const ixText = createWidget(widget.TEXT, {
+        text: "IX 0x000",
+        x: 390,
+        y: 220,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const bText = createWidget(widget.TEXT, {
-      text: "B 0x0",
-      x: 390,
-      y: 190,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const iyText = createWidget(widget.TEXT, {
+        text: "IY 0x000",
+        x: 390,
+        y: 250,
+        w: 100,
+        h: 20,
+        color: 0xdddd00,
+        text_size: 15,
+      });
 
-    const ixText = createWidget(widget.TEXT, {
-      text: "IX 0x000",
-      x: 390,
-      y: 220,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const state = this.state;
+      this.state.stateInterval = setInterval(() => {
+        const cpuModule = state.cpu;
+        clockMS.setProperty(prop.TEXT, `${state.msPerClock.toFixed(3)}ms`);
+        batchText.setProperty(prop.TEXT, `batch ${state.batchSize}`);
+        pcText.setProperty(
+          prop.TEXT,
+          `PC 0x${cpuModule.pc().toString(16).padStart(4, "0")}`,
+        );
+        npcText.setProperty(
+          prop.TEXT,
+          `NPC 0x${cpuModule.get_NPC().toString(16).padStart(4, "0")}`,
+        );
+        spText.setProperty(
+          prop.TEXT,
+          `SP 0x${cpuModule.get_SP().toString(16).padStart(2, "0")}`,
+        );
+        aText.setProperty(
+          prop.TEXT,
+          `A 0x${cpuModule.get_A().toString(16).padStart(1, "0")}`,
+        );
+        bText.setProperty(
+          prop.TEXT,
+          `B 0x${cpuModule.get_B().toString(16).padStart(1, "0")}`,
+        );
+        ixText.setProperty(
+          prop.TEXT,
+          `IX 0x${cpuModule.get_IX().toString(16).padStart(3, "0")}`,
+        );
+        iyText.setProperty(
+          prop.TEXT,
+          `IY 0x${cpuModule.get_IY().toString(16).padStart(3, "0")}`,
+        );
+      }, 1000);
+    },
+    _buildDisplayUI() {
+      const canvas = createWidget(widget.CANVAS, {
+        x: DISPLAY_POS_X,
+        y: DISPLAY_POS_Y,
+        w: DISPLAY_WIDTH,
+        h: DISPLAY_HEIGHT,
+      });
+      canvas.drawRect({
+        x1: 0,
+        y1: 0,
+        x2: DISPLAY_WIDTH,
+        y2: DISPLAY_HEIGHT,
+        color: 0x999999,
+      });
 
-    const iyText = createWidget(widget.TEXT, {
-      text: "IY 0x000",
-      x: 390,
-      y: 250,
-      w: 100,
-      h: 20,
-      color: 0xdddd00,
-      text_size: 15,
-    });
+      const state = this.state;
+      const updateDisplay = () => {
+        const buf = displayBuffers[displayBufferIndex];
+        packVram(state.cpu.get_VRAM_words(), buf);
 
-    const state = this.state;
-    this.state.stateInterval = setInterval(() => {
-      const cpuModule = state.cpu;
-      clockMS.setProperty(prop.TEXT, `${state.msPerClock.toFixed(3)}ms`);
-      batchText.setProperty(prop.TEXT, `batch ${state.batchSize}`);
-      pcText.setProperty(
-        prop.TEXT,
-        `PC 0x${cpuModule.pc().toString(16).padStart(4, "0")}`,
-      );
-      npcText.setProperty(
-        prop.TEXT,
-        `NPC 0x${cpuModule.get_NPC().toString(16).padStart(4, "0")}`,
-      );
-      spText.setProperty(
-        prop.TEXT,
-        `SP 0x${cpuModule.get_SP().toString(16).padStart(2, "0")}`,
-      );
-      aText.setProperty(
-        prop.TEXT,
-        `A 0x${cpuModule.get_A().toString(16).padStart(1, "0")}`,
-      );
-      bText.setProperty(
-        prop.TEXT,
-        `B 0x${cpuModule.get_B().toString(16).padStart(1, "0")}`,
-      );
-      ixText.setProperty(
-        prop.TEXT,
-        `IX 0x${cpuModule.get_IX().toString(16).padStart(3, "0")}`,
-      );
-      iyText.setProperty(
-        prop.TEXT,
-        `IY 0x${cpuModule.get_IY().toString(16).padStart(3, "0")}`,
-      );
-    }, 1000);
-  },
-  _buildDisplayUI() {
-    const canvas = createWidget(widget.CANVAS, {
-      x: DISPLAY_POS_X,
-      y: DISPLAY_POS_Y,
-      w: DISPLAY_WIDTH,
-      h: DISPLAY_HEIGHT,
-    });
-    canvas.drawRect({
-      x1: 0,
-      y1: 0,
-      x2: DISPLAY_WIDTH,
-      y2: DISPLAY_HEIGHT,
-      color: 0x999999,
-    });
+        const previousBuf = displayBuffers[(displayBufferIndex + 1) % 2];
+        let hasDiff = false;
 
-    const state = this.state;
-    const updateDisplay = () => {
-      const buf = displayBuffers[displayBufferIndex];
-      packVram(state.cpu.get_VRAM_words(), buf);
-
-      const previousBuf = displayBuffers[(displayBufferIndex + 1) % 2];
-      let hasDiff = false;
-
-      for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
-        if (buf[x] === previousBuf[x]) {
-          continue;
-        }
-        hasDiff = true;
-
-        const x1 = x * DISPLAY_PIXEL_SIZE;
-        const x2 = x1 + DISPLAY_PIXEL_SIZE;
-
-        canvas.drawRect({
-          x1: x1,
-          y1: 0,
-          x2: x2,
-          y2: DISPLAY_HEIGHT,
-          color: 0x999999,
-        });
-
-        let word = buf[x];
-        let y = 0;
-        while (word > 0 && y < DISPLAY_PIXEL_COUNT_Y) {
-          while (y < DISPLAY_PIXEL_COUNT_Y && !(word & 1)) {
-            word >>= 1;
-            y += 1;
+        for (let x = 0; x < DISPLAY_PIXEL_COUNT_X; x += 1) {
+          if (buf[x] === previousBuf[x]) {
+            continue;
           }
-          if (word === 0 || y >= DISPLAY_PIXEL_COUNT_Y) {
-            break;
-          }
-          const runStart = y;
-          while (y < DISPLAY_PIXEL_COUNT_Y && word & 1) {
-            word >>= 1;
-            y += 1;
-          }
+          hasDiff = true;
+
+          const x1 = x * DISPLAY_PIXEL_SIZE;
+          const x2 = x1 + DISPLAY_PIXEL_SIZE;
+
           canvas.drawRect({
             x1: x1,
-            y1: runStart * DISPLAY_PIXEL_SIZE,
+            y1: 0,
             x2: x2,
-            y2: y * DISPLAY_PIXEL_SIZE,
-            color: 0x111111,
+            y2: DISPLAY_HEIGHT,
+            color: 0x999999,
           });
+
+          let word = buf[x];
+          let y = 0;
+          while (word > 0 && y < DISPLAY_PIXEL_COUNT_Y) {
+            while (y < DISPLAY_PIXEL_COUNT_Y && !(word & 1)) {
+              word >>= 1;
+              y += 1;
+            }
+            if (word === 0 || y >= DISPLAY_PIXEL_COUNT_Y) {
+              break;
+            }
+            const runStart = y;
+            while (y < DISPLAY_PIXEL_COUNT_Y && word & 1) {
+              word >>= 1;
+              y += 1;
+            }
+            canvas.drawRect({
+              x1: x1,
+              y1: runStart * DISPLAY_PIXEL_SIZE,
+              x2: x2,
+              y2: y * DISPLAY_PIXEL_SIZE,
+              color: 0x111111,
+            });
+          }
         }
+
+        if (hasDiff) {
+          displayBufferIndex = (displayBufferIndex + 1) % 2;
+        }
+      };
+      updateDisplay();
+      this.state.displayInterval = setInterval(updateDisplay, 50);
+    },
+    _buildIconsUI() {
+      createWidget(widget.FILL_RECT, {
+        x: DISPLAY_POS_X,
+        y: DISPLAY_POS_Y - ICON_SLOT_SIZE,
+        w: DISPLAY_WIDTH,
+        h: ICON_SLOT_SIZE,
+        color: 0xbbc7ac,
+      });
+      createWidget(widget.FILL_RECT, {
+        x: DISPLAY_POS_X,
+        y: DISPLAY_POS_Y + DISPLAY_HEIGHT,
+        w: DISPLAY_WIDTH,
+        h: ICON_SLOT_SIZE,
+        color: 0xbbc7ac,
+      });
+
+      const topBaseY = DISPLAY_POS_Y - ICON_SLOT_SIZE + ICON_PADDING;
+      const bottomBaseY = DISPLAY_POS_Y + DISPLAY_HEIGHT + ICON_PADDING;
+
+      const iconWidgets = [];
+      for (let slotIndex = 0; slotIndex < 4; slotIndex += 1) {
+        const slotX = DISPLAY_POS_X + slotIndex * ICON_SLOT_SIZE + ICON_PADDING;
+        iconWidgets.push(
+          createWidget(widget.IMG, {
+            x: slotX,
+            y: topBaseY,
+            src: ICON_DEFS[slotIndex].src,
+          }),
+        );
+      }
+      for (let slotIndex = 0; slotIndex < 4; slotIndex += 1) {
+        const slotX = DISPLAY_POS_X + slotIndex * ICON_SLOT_SIZE + ICON_PADDING;
+        iconWidgets.push(
+          createWidget(widget.IMG, {
+            x: slotX,
+            y: bottomBaseY,
+            src: ICON_DEFS[slotIndex + 4].src,
+          }),
+        );
       }
 
-      if (hasDiff) {
-        displayBufferIndex = (displayBufferIndex + 1) % 2;
-      }
-    };
-    updateDisplay();
-    this.state.displayInterval = setInterval(updateDisplay, 50);
-  },
-  _buildIconsUI() {
-    createWidget(widget.FILL_RECT, {
-      x: DISPLAY_POS_X,
-      y: DISPLAY_POS_Y - ICON_SLOT_SIZE,
-      w: DISPLAY_WIDTH,
-      h: ICON_SLOT_SIZE,
-      color: 0xbbc7ac,
-    });
-    createWidget(widget.FILL_RECT, {
-      x: DISPLAY_POS_X,
-      y: DISPLAY_POS_Y + DISPLAY_HEIGHT,
-      w: DISPLAY_WIDTH,
-      h: ICON_SLOT_SIZE,
-      color: 0xbbc7ac,
-    });
+      const state = this.state;
+      const updateIcons = () => {
+        const vram = state.cpu.get_VRAM();
+        for (let iconIndex = 0; iconIndex < 8; iconIndex += 1) {
+          const def = ICON_DEFS[iconIndex];
+          const isOn = (vram[def.nibble] >> def.bit) & 1;
+          iconWidgets[iconIndex].setProperty(prop.VISIBLE, isOn !== 0);
+        }
+      };
+      updateIcons();
+      this.state.iconInterval = setInterval(updateIcons, 50);
+    },
+    _buildButtonsUI() {
+      const state = this.state;
 
-    const topBaseY = DISPLAY_POS_Y - ICON_SLOT_SIZE + ICON_PADDING;
-    const bottomBaseY = DISPLAY_POS_Y + DISPLAY_HEIGHT + ICON_PADDING;
+      const pressButton = (port, pin, level) => {
+        state.cpu.pin_set(port, pin, level);
+        logger.log(`button down (port=${port}, pin=${pin}, level=${level})`);
+      };
 
-    const iconWidgets = [];
-    for (let slotIndex = 0; slotIndex < 4; slotIndex += 1) {
-      const slotX = DISPLAY_POS_X + slotIndex * ICON_SLOT_SIZE + ICON_PADDING;
-      iconWidgets.push(
-        createWidget(widget.IMG, {
-          x: slotX,
-          y: topBaseY,
-          src: ICON_DEFS[slotIndex].src,
-        }),
-      );
-    }
-    for (let slotIndex = 0; slotIndex < 4; slotIndex += 1) {
-      const slotX = DISPLAY_POS_X + slotIndex * ICON_SLOT_SIZE + ICON_PADDING;
-      iconWidgets.push(
-        createWidget(widget.IMG, {
-          x: slotX,
-          y: bottomBaseY,
-          src: ICON_DEFS[slotIndex + 4].src,
-        }),
-      );
-    }
+      const releaseButton = (port, pin) => {
+        state.cpu.pin_release(port, pin);
+        logger.log(`button up (port=${port}, pin=${pin})`);
+      };
 
-    const state = this.state;
-    const updateIcons = () => {
-      const vram = state.cpu.get_VRAM();
-      for (let iconIndex = 0; iconIndex < 8; iconIndex += 1) {
-        const def = ICON_DEFS[iconIndex];
-        const isOn = (vram[def.nibble] >> def.bit) & 1;
-        iconWidgets[iconIndex].setProperty(prop.VISIBLE, isOn !== 0);
-      }
-    };
-    updateIcons();
-    this.state.iconInterval = setInterval(updateIcons, 50);
-  },
-  _buildButtonsUI() {
-    const state = this.state;
+      const buttonA = createWidget(widget.BUTTON, {
+        x: 100,
+        y: 360,
+        w: 80,
+        h: 80,
+        text: "A",
+        color: 0x555555,
+        press_color: 0x999999,
+        normal_color: 0xcccccc,
+        radius: 40,
+      });
+      buttonA.addEventListener(event.CLICK_DOWN, () => {
+        pressButton(
+          buttons.btnLeft.port,
+          buttons.btnLeft.pin,
+          buttons.btnLeft.level,
+        );
+      });
+      buttonA.addEventListener(event.CLICK_UP, () => {
+        releaseButton(buttons.btnLeft.port, buttons.btnLeft.pin);
+      });
 
-    const pressButton = (port, pin, level) => {
-      state.cpu.pin_set(port, pin, level);
-      logger.log(`button down (port=${port}, pin=${pin}, level=${level})`);
-    };
+      const buttonB = createWidget(widget.BUTTON, {
+        x: 200,
+        y: 390,
+        w: 80,
+        h: 80,
+        text: "B",
+        color: 0x555555,
+        press_color: 0x999999,
+        normal_color: 0xcccccc,
+        radius: 40,
+      });
+      buttonB.addEventListener(event.CLICK_DOWN, () => {
+        pressButton(
+          buttons.btnCenter.port,
+          buttons.btnCenter.pin,
+          buttons.btnCenter.level,
+        );
+      });
+      buttonB.addEventListener(event.CLICK_UP, () => {
+        releaseButton(buttons.btnCenter.port, buttons.btnCenter.pin);
+      });
 
-    const releaseButton = (port, pin) => {
-      state.cpu.pin_release(port, pin);
-      logger.log(`button up (port=${port}, pin=${pin})`);
-    };
+      const buttonC = createWidget(widget.BUTTON, {
+        x: 300,
+        y: 360,
+        w: 80,
+        h: 80,
+        text: "C",
+        color: 0x555555,
+        press_color: 0x999999,
+        normal_color: 0xcccccc,
+        radius: 40,
+      });
+      buttonC.addEventListener(event.CLICK_DOWN, () => {
+        pressButton(
+          buttons.btnRight.port,
+          buttons.btnRight.pin,
+          buttons.btnRight.level,
+        );
+      });
+      buttonC.addEventListener(event.CLICK_UP, () => {
+        releaseButton(buttons.btnRight.port, buttons.btnRight.pin);
+      });
 
-    const buttonA = createWidget(widget.BUTTON, {
-      x: 100,
-      y: 360,
-      w: 80,
-      h: 80,
-      text: "A",
-      color: 0x555555,
-      press_color: 0x999999,
-      normal_color: 0xcccccc,
-      radius: 40,
-    });
-    buttonA.addEventListener(event.CLICK_DOWN, () => {
-      pressButton(
-        buttons.btnLeft.port,
-        buttons.btnLeft.pin,
-        buttons.btnLeft.level,
-      );
-    });
-    buttonA.addEventListener(event.CLICK_UP, () => {
-      releaseButton(buttons.btnLeft.port, buttons.btnLeft.pin);
-    });
-
-    const buttonB = createWidget(widget.BUTTON, {
-      x: 200,
-      y: 390,
-      w: 80,
-      h: 80,
-      text: "B",
-      color: 0x555555,
-      press_color: 0x999999,
-      normal_color: 0xcccccc,
-      radius: 40,
-    });
-    buttonB.addEventListener(event.CLICK_DOWN, () => {
-      pressButton(
-        buttons.btnCenter.port,
-        buttons.btnCenter.pin,
-        buttons.btnCenter.level,
-      );
-    });
-    buttonB.addEventListener(event.CLICK_UP, () => {
-      releaseButton(buttons.btnCenter.port, buttons.btnCenter.pin);
-    });
-
-    const buttonC = createWidget(widget.BUTTON, {
-      x: 300,
-      y: 360,
-      w: 80,
-      h: 80,
-      text: "C",
-      color: 0x555555,
-      press_color: 0x999999,
-      normal_color: 0xcccccc,
-      radius: 40,
-    });
-    buttonC.addEventListener(event.CLICK_DOWN, () => {
-      pressButton(
-        buttons.btnRight.port,
-        buttons.btnRight.pin,
-        buttons.btnRight.level,
-      );
-    });
-    buttonC.addEventListener(event.CLICK_UP, () => {
-      releaseButton(buttons.btnRight.port, buttons.btnRight.pin);
-    });
-
-    // const buttonAC = createWidget(widget.BUTTON, {
-    //   x: 210,
-    //   y: 410,
-    //   w: 60,
-    //   h: 60,
-    //   text: "A+C",
-    //   color: 0x555555,
-    //   press_color: 0x999999,
-    //   normal_color: 0xcccccc,
-    //   radius: 30,
-    // });
-    // buttonAC.addEventListener(event.CLICK_DOWN, () => {
-    //   pressButton(
-    //     buttons.btnLeft.port,
-    //     buttons.btnLeft.pin,
-    //     buttons.btnLeft.level,
-    //   );
-    //   pressButton(
-    //     buttons.btnRight.port,
-    //     buttons.btnRight.pin,
-    //     buttons.btnRight.level,
-    //   );
-    // });
-    // buttonAC.addEventListener(event.CLICK_UP, () => {
-    //   releaseButton(buttons.btnLeft.port, buttons.btnLeft.pin);
-    //   releaseButton(buttons.btnRight.port, buttons.btnRight.pin);
-    // });
-  },
-});
+      // const buttonAC = createWidget(widget.BUTTON, {
+      //   x: 210,
+      //   y: 410,
+      //   w: 60,
+      //   h: 60,
+      //   text: "A+C",
+      //   color: 0x555555,
+      //   press_color: 0x999999,
+      //   normal_color: 0xcccccc,
+      //   radius: 30,
+      // });
+      // buttonAC.addEventListener(event.CLICK_DOWN, () => {
+      //   pressButton(
+      //     buttons.btnLeft.port,
+      //     buttons.btnLeft.pin,
+      //     buttons.btnLeft.level,
+      //   );
+      //   pressButton(
+      //     buttons.btnRight.port,
+      //     buttons.btnRight.pin,
+      //     buttons.btnRight.level,
+      //   );
+      // });
+      // buttonAC.addEventListener(event.CLICK_UP, () => {
+      //   releaseButton(buttons.btnLeft.port, buttons.btnLeft.pin);
+      //   releaseButton(buttons.btnRight.port, buttons.btnRight.pin);
+      // });
+    },
+  }),
+);
