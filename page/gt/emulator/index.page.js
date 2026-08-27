@@ -34,17 +34,6 @@ const ICON_SIZE = 48;
 const ICON_SLOT_SIZE = DISPLAY_WIDTH / 4;
 const ICON_PADDING = (ICON_SLOT_SIZE - ICON_SIZE) / 2;
 
-const ICON_DEFS = [
-  { src: "image/tamagotchi_p1/icon_16_0.png", nibble: 16, bit: 0 },
-  { src: "image/tamagotchi_p1/icon_16_1.png", nibble: 16, bit: 1 },
-  { src: "image/tamagotchi_p1/icon_16_2.png", nibble: 16, bit: 2 },
-  { src: "image/tamagotchi_p1/icon_16_3.png", nibble: 16, bit: 3 },
-  { src: "image/tamagotchi_p1/icon_137_0.png", nibble: 137, bit: 0 },
-  { src: "image/tamagotchi_p1/icon_137_1.png", nibble: 137, bit: 1 },
-  { src: "image/tamagotchi_p1/icon_137_2.png", nibble: 137, bit: 2 },
-  { src: "image/tamagotchi_p1/icon_137_3.png", nibble: 137, bit: 3 },
-];
-
 const displayBuffers = [
   new Uint16Array(DISPLAY_WIDTH),
   new Uint16Array(DISPLAY_WIDTH),
@@ -72,6 +61,7 @@ const buttons = {
 Page({
   state: {
     romId: undefined,
+    romConfig: undefined,
     cpu: undefined,
     clockCounter: 0,
     clocksPerSecond: 0,
@@ -97,6 +87,7 @@ Page({
     cpu.initCPU(rom, romConfig.clockHz, toneGenerator);
 
     this.state.romId = romId;
+    this.state.romConfig = romConfig;
     if (hasSaveState(romId)) {
       try {
         cpu.loadState(readSaveState(romId));
@@ -389,6 +380,12 @@ Page({
     this.state.displayInterval = setInterval(updateDisplay, 50);
   },
   _buildIconsUI() {
+    const icons = this.state.romConfig.icons;
+
+    if (icons.length === 0) {
+      return;
+    }
+
     createWidget(widget.FILL_RECT, {
       x: DISPLAY_POS_X,
       y: DISPLAY_POS_Y - ICON_SLOT_SIZE,
@@ -414,7 +411,7 @@ Page({
         createWidget(widget.IMG, {
           x: slotX,
           y: topBaseY,
-          src: ICON_DEFS[slotIndex].src,
+          src: icons[slotIndex].src,
         }),
       );
     }
@@ -424,7 +421,7 @@ Page({
         createWidget(widget.IMG, {
           x: slotX,
           y: bottomBaseY,
-          src: ICON_DEFS[slotIndex + 4].src,
+          src: icons[slotIndex + 4].src,
         }),
       );
     }
@@ -432,8 +429,8 @@ Page({
     const state = this.state;
     const updateIcons = () => {
       const vram = state.cpu.get_VRAM();
-      for (let iconIndex = 0; iconIndex < 8; iconIndex += 1) {
-        const def = ICON_DEFS[iconIndex];
+      for (let iconIndex = 0; iconIndex < icons.length; iconIndex += 1) {
+        const def = icons[iconIndex];
         const isOn = (vram[def.nibble] >> def.bit) & 1;
         iconWidgets[iconIndex].setProperty(prop.VISIBLE, isOn !== 0);
       }

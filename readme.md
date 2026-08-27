@@ -17,8 +17,8 @@ The implementation heavily inspired by
 
 This emulator is a work in progress, with many limitations:
 
-- ✅ Only Tamagotchi P1 is known to run successfully.
-- 🖼️ Status icons use the Tamagotchi P1 layout for all ROMs.
+- ✅ Tamagotchi P1 is known to run successfully. Digimon ROMs load and run at the correct clock speed, but have not been fully validated.
+- 🖼️ Status icons are shown for Tamagotchi ROMs. Digimon ROMs currently show no icons.
 - ✅ Tested only on Amazfit T-Rex 3.
 - ⏱️ Emulation speed varies by device; close to full speed on Amazfit T-Rex 3.
 - 💾 Progress is saved automatically when leaving the emulator and every 5 minutes, and restored when re-selecting a ROM. Use the **...** button next to a ROM to open its configuration menu, where you can reset the save state.
